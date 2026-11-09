@@ -20,3 +20,6 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local call history database
+data/

@@ -16,6 +16,7 @@ from app.pipeline.barge_in import BargeInDetector, CallState
 from app.pipeline.llm import GeminiLLM
 from app.pipeline.stt import DeepgramSTT
 from app.pipeline.tts import ElevenLabsTTS
+from app.storage.call_log import get_call_log
 from app.telephony.media import (
     clear_twilio_audio,
     send_audio_to_twilio,
@@ -298,6 +299,17 @@ class CallSession:
                 )
             except Exception:
                 logger.exception("Failed to qualify lead for call %s", self.call_sid)
+
+        # Persist to the call log (powers the dashboard)
+        try:
+            get_call_log().record_result(
+                self.call_sid,
+                duration=duration,
+                transcript=self._conversation_transcript,
+                qualification=self._qualification,
+            )
+        except Exception:
+            logger.exception("Failed to write call log for %s", self.call_sid)
 
         # Notify campaign dialer that call is complete
         if self.on_call_complete:

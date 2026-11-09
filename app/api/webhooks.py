@@ -7,6 +7,8 @@ import logging
 
 from fastapi import APIRouter, Form
 
+from app.storage.call_log import get_call_log
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -40,6 +42,13 @@ async def twilio_status_callback(
         "to": To,
         "duration": Duration or CallDuration,
     }
+
+    try:
+        raw_duration = CallDuration or Duration
+        duration = float(raw_duration) if raw_duration else None
+        get_call_log().update_status(CallSid, CallStatus, duration=duration, phone=To)
+    except Exception:
+        logger.exception("Call log update failed for %s", CallSid)
 
     return {"status": "ok"}
 

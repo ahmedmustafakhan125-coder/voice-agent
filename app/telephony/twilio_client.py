@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 from twilio.rest import Client
 
 from app.config import settings
+from app.storage.call_log import get_call_log
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,33 @@ def initiate_outbound_call(
             "Outbound call initiated: sid=%s to=%s campaign=%s",
             call.sid, to_number, campaign_id,
         )
+        _log_safely(
+            "record_initiated",
+            call_sid=call.sid,
+            phone=to_number,
+            contact_name=contact_name,
+            company=contact_company,
+            campaign_id=campaign_id,
+            contact_id=contact_id,
+        )
         return call.sid
 
     except Exception:
         logger.exception("Failed to initiate outbound call to %s", to_number)
+        _log_safely(
+            "record_failed_attempt",
+            phone=to_number,
+            contact_name=contact_name,
+            company=contact_company,
+            campaign_id=campaign_id,
+            contact_id=contact_id,
+        )
         return None
+
+
+def _log_safely(method: str, **kwargs) -> None:
+    """Write to the call log without ever breaking call placement."""
+    try:
+        getattr(get_call_log(), method)(**kwargs)
+    except Exception:
+        logger.exception("Call log write failed (%s)", method)

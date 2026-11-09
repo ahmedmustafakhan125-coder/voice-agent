@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    # Local data (call history database)
+    data_dir: str = "data"
+
     model_config = {"env_file": ENV_FILE, "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
