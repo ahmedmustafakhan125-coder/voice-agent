@@ -16,7 +16,7 @@ from app.pipeline.barge_in import BargeInDetector, CallState
 from app.pipeline.llm import GeminiLLM
 from app.pipeline.stt import DeepgramSTT
 from app.pipeline.tts import ElevenLabsTTS
-from app.telephony.twilio_ws import (
+from app.telephony.media import (
     clear_twilio_audio,
     send_audio_to_twilio,
     send_mark_to_twilio,

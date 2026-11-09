@@ -12,6 +12,11 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.pipeline.session import CallSession
+from app.telephony.media import (  # noqa: F401  (re-exported for compatibility)
+    clear_twilio_audio,
+    send_audio_to_twilio,
+    send_mark_to_twilio,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -88,43 +93,3 @@ async def media_stream(websocket: WebSocket):
             await session.stop()
         logger.info("Twilio WebSocket handler finished: stream_sid=%s", stream_sid)
 
-
-async def send_audio_to_twilio(
-    websocket: WebSocket,
-    stream_sid: str,
-    audio_bytes: bytes,
-) -> None:
-    """Send audio back to Twilio as base64-encoded mulaw."""
-    payload = base64.b64encode(audio_bytes).decode("ascii")
-    message = {
-        "event": "media",
-        "streamSid": stream_sid,
-        "media": {"payload": payload},
-    }
-    await websocket.send_text(json.dumps(message))
-
-
-async def send_mark_to_twilio(
-    websocket: WebSocket,
-    stream_sid: str,
-    mark_name: str,
-) -> None:
-    """Send a mark event to Twilio for playback tracking."""
-    message = {
-        "event": "mark",
-        "streamSid": stream_sid,
-        "mark": {"name": mark_name},
-    }
-    await websocket.send_text(json.dumps(message))
-
-
-async def clear_twilio_audio(
-    websocket: WebSocket,
-    stream_sid: str,
-) -> None:
-    """Tell Twilio to stop playing any queued audio (for barge-in)."""
-    message = {
-        "event": "clear",
-        "streamSid": stream_sid,
-    }
-    await websocket.send_text(json.dumps(message))

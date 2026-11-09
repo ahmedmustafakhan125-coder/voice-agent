@@ -1,4 +1,10 @@
+import os
+
 from pydantic_settings import BaseSettings
+
+# Which env file to load. Overridable so tests (and the setup wizard) can
+# point at a different file without touching the real .env.
+ENV_FILE = os.environ.get("VOICE_AGENT_ENV_FILE", ".env")
 
 
 class Settings(BaseSettings):
@@ -30,7 +36,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ENV_FILE, "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()
