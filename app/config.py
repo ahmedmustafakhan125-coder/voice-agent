@@ -1,0 +1,36 @@
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    # Twilio (client provides these)
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_phone_number: str = ""
+
+    # Deepgram STT
+    deepgram_api_key: str = ""
+
+    # Google Gemini LLM
+    gemini_api_key: str = ""
+
+    # ElevenLabs TTS
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"  # default Rachel voice
+
+    # Google Sheets
+    google_sheets_credentials_file: str = "credentials/service-account.json"
+    google_sheet_id: str = ""
+
+    # Email
+    sendgrid_api_key: str = ""
+    sendgrid_from_email: str = "noreply@yourdomain.com"
+
+    # Server
+    public_url: str = "https://your-domain.com"
+    host: str = "0.0.0.0"
+    port: int = 8000
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+
+settings = Settings()

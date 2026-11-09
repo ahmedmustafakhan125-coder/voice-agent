@@ -1,0 +1,40 @@
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+websockets>=14.0
+
+# Twilio
+twilio>=9.4.0
+
+# Deepgram STT
+deepgram-sdk>=3.8.0
+
+# Google Gemini LLM
+google-generativeai>=0.8.0
+
+# ElevenLabs TTS (using raw websockets, not SDK)
+# websockets already listed above
+
+# Google Sheets
+gspread>=6.1.0
+google-auth>=2.36.0
+
+# Email
+sendgrid>=6.11.0
+
+# Configuration
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+
+# Logging
+structlog>=24.4.0
+
+# HTTP client
+httpx>=0.28.0
+
+# Utilities
+python-dotenv>=1.0.1
+python-multipart>=0.0.18
+
+# Static file serving
+aiofiles>=24.0.0

@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Agent Dashboard</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f2f5;
+            color: #1a202c;
+            min-height: 100vh;
+        }
+
+        /* === Header === */
+        header {
+            background: #1a202c;
+            color: #fff;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        header h1 { font-size: 1.25rem; font-weight: 600; }
+        .health-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+        }
+        .health-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #e53e3e;
+        }
+        .health-dot.ok { background: #38a169; }
+
+        /* === Navigation === */
+        nav {
+            display: flex;
+            gap: 2px;
+            padding: 0 24px;
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            overflow-x: auto;
+        }
+        nav button {
+            padding: 14px 20px;
+            border: none;
+            background: transparent;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #718096;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        nav button:hover { color: #2d3748; background: #f7fafc; }
+        nav button.active { color: #3182ce; border-bottom-color: #3182ce; }
+
+        /* === Main Content === */
+        main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        section { display: none; animation: fadeIn 0.2s ease; }
+        section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* === Cards Grid === */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: transform 0.15s;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card .label { font-size: 0.8rem; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .stat-card .value { font-size: 2rem; font-weight: 700; }
+        .stat-card.blue { border-left-color: #3182ce; }
+        .stat-card.blue .value { color: #3182ce; }
+        .stat-card.green { border-left-color: #38a169; }
+        .stat-card.green .value { color: #38a169; }
+        .stat-card.gold { border-left-color: #d69e2e; }
+        .stat-card.gold .value { color: #d69e2e; }
+        .stat-card.red { border-left-color: #e53e3e; }
+        .stat-card.red .value { color: #e53e3e; }
+        .stat-card.indigo { border-left-color: #5a67d8; }
+        .stat-card.indigo .value { color: #5a67d8; }
+
+        /* === Section Headers === */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .section-header h2 { font-size: 1.4rem; font-weight: 600; }
+
+        /* === Tables === */
+        .table-wrap { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        thead { background: #f7fafc; }
+        th { padding: 12px 16px; text-align: left; font-weight: 600; color: #4a5568; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+        td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        tbody tr:hover { background: #f7fafc; }
+        .empty-state { text-align: center; padding: 40px; color: #a0aec0; }
+
+        /* === Status Badges === */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        .badge-running { background: #c6f6d5; color: #22543d; }
+        .badge-paused { background: #fefcbf; color: #744210; }
+        .badge-completed { background: #bee3f8; color: #2a4365; }
+        .badge-stopping { background: #feebc8; color: #7b341e; }
+        .badge-error { background: #fed7d7; color: #742a2a; }
+        .badge-idle { background: #e2e8f0; color: #4a5568; }
+
+        /* === Buttons === */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #3182ce; color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: #2b6cb0; }
+        .btn-success { background: #38a169; color: #fff; }
+        .btn-success:hover:not(:disabled) { background: #2f855a; }
+        .btn-warning { background: #d69e2e; color: #fff; }
+        .btn-warning:hover:not(:disabled) { background: #b7791f; }
+        .btn-danger { background: #e53e3e; color: #fff; }
+        .btn-danger:hover:not(:disabled) { background: #c53030; }
+        .btn-outline { background: transparent; color: #4a5568; border: 1px solid #e2e8f0; }
+        .btn-outline:hover:not(:disabled) { background: #f7fafc; }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* === Forms === */
+        .form-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 520px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 6px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.15s;
+        }
+        .form-group input:focus { outline: none; border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
+        .form-hint { font-size: 0.78rem; color: #a0aec0; margin-top: 4px; }
+        .form-result {
+            margin-top: 20px;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .form-result.success { display: block; background: #c6f6d5; color: #22543d; }
+        .form-result.error { display: block; background: #fed7d7; color: #742a2a; }
+
+        /* === Info Box === */
+        .info-box {
+            margin-top: 20px;
+            padding: 16px;
+            background: #ebf8ff;
+            border-radius: 8px;
+            color: #2a4365;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        /* === Back Link === */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #3182ce;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .back-link:hover { text-decoration: underline; }
+
+        /* === Campaign Detail === */
+        .detail-meta { margin: 20px 0; font-size: 0.9rem; color: #4a5568; line-height: 2; }
+        .detail-meta strong { color: #2d3748; }
+        .error-list { margin-top: 16px; }
+        .error-list li { background: #fed7d7; color: #742a2a; padding: 8px 14px; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; list-style: none; }
+
+        /* === Toast === */
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+        .toast {
+            padding: 14px 20px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+            max-width: 360px;
+        }
+        .toast-success { background: #38a169; }
+        .toast-error { background: #e53e3e; }
+        .toast-info { background: #3182ce; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* === Quick Actions === */
+        .quick-actions { margin-bottom: 24px; }
+        .quick-actions h3 { font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: #4a5568; }
+
+        /* === Responsive === */
+        @media (max-width: 768px) {
+            main { padding: 16px; }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 14px; }
+            .stat-card .value { font-size: 1.5rem; }
+            .form-card { padding: 20px; }
+            nav button { padding: 12px 14px; font-size: 0.82rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+    <h1>Voice Agent Dashboard</h1>
+    <div class="health-badge">
+        <div class="health-dot" id="healthDot"></div>
+        <span id="healthText">Checking...</span>
+    </div>
+</header>
+
+<!-- Navigation -->
+<nav>
+    <button class="active" data-page="dashboard">Dashboard</button>
+    <button data-page="start-campaign">Start Campaign</button>
+    <button data-page="campaigns">Campaigns</button>
+    <button data-page="test-call">Test Call</button>
+    <button data-page="send-email">Send Email</button>
+</nav>
+
+<!-- Main Content -->
+<main>
+
+    <!-- PAGE: Dashboard -->
+    <section id="page-dashboard" class="active">
+        <div class="section-header">
+            <h2>Overview</h2>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-card blue">
+                <div class="label">Total Calls</div>
+                <div class="value" id="stat-total-calls">0</div>
+            </div>
+            <div class="stat-card green">
+                <div class="label">Answered</div>
+                <div class="value" id="stat-answered">0</div>
+            </div>
+            <div class="stat-card gold">
+                <div class="label">Qualified Leads</div>
+                <div class="value" id="stat-qualified">0</div>
+            </div>
+            <div class="stat-card red">
+                <div class="label">Failed</div>
+                <div class="value" id="stat-failed">0</div>
+            </div>
+            <div class="stat-card indigo">
+                <div class="label">Active Campaigns</div>
+                <div class="value" id="stat-active">0</div>
+            </div>
+            <div class="stat-card indigo">
+                <div class="label">Total Campaigns</div>
+                <div class="value" id="stat-total-campaigns">0</div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h3>Quick Actions</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="switchPage('start-campaign')">Start New Campaign</button>
+                <button class="btn btn-outline" onclick="switchPage('test-call')">Make Test Call</button>
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h3>Active Campaigns</h3>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Campaign ID</th>
+                        <th>Status</th>
+                        <th>Calls Made</th>
+                        <th>Answered</th>
+                        <th>Qualified</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="dashboard-campaigns-body">
+                    <tr><td colspan="6" class="empty-state">No active campaigns</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- PAGE: Start Campaign -->
+    <section id="page-start-campaign">
+        <div class="section-header">
+            <h2>Start New Campaign</h2>
+        </div>
+        <div class="form-card">
+            <form id="form-start-campaign">
+                <div class="form-group">
+                    <label>Max Concurrent Calls</label>
+                    <input type="number" id="inp-concurrent" value="1" min="1" max="10">
+                    <div class="form-hint">How many calls to run at the same time (1-10)</div>
+                </div>
+                <div class="form-group">
+                    <label>Delay Between Calls (seconds)</label>
+                    <input type="number" id="inp-delay" value="5" min="1" step="0.5">
+                    <div class="form-hint">Wait time before dialing the next contact</div>
+                </div>
+                <div class="form-group">
+                    <label>Max Calls</label>
+                    <input type="number" id="inp-max-calls" value="0" min="0">
+                    <div class="form-hint">0 = call all pending contacts in the sheet</div>
+                </div>
+                <button type="submit" class="btn btn-success">Start Campaign</button>
+            </form>
+            <div class="info-box">
+                Contacts will be read from your Google Sheet. The agent will call all rows with a blank or "pending" status. Make sure your sheet has Name, Phone, and Company columns filled in.
+            </div>
+            <div class="form-result" id="result-start-campaign"></div>
+        </div>
+    </section>
+
+    <!-- PAGE: Campaigns List -->
+    <section id="page-campaigns">
+        <div class="section-header">
+            <h2>All Campaigns</h2>
+            <button class="btn btn-outline btn-sm" onclick="loadCampaigns()">Refresh</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Campaign ID</th>
+                        <th>Status</th>
+                        <th>Contacts</th>
+                        <th>Calls Made</th>
+                        <th>Answered</th>
+                        <th>Qualified</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="campaigns-body">
+                    <tr><td colspan="8" class="empty-state">No campaigns yet — start one from the Dashboard</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- PAGE: Campaign Detail -->
+    <section id="page-campaign-detail">
+        <a class="back-link" onclick="switchPage('campaigns')">&#8592; Back to Campaigns</a>
+        <div class="section-header">
+            <h2>Campaign: <span id="detail-id">—</span></h2>
+            <span class="badge" id="detail-status-badge">—</span>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-card blue">
+                <div class="label">Calls Made</div>
+                <div class="value" id="detail-calls-made">0</div>
+            </div>
+            <div class="stat-card green">
+                <div class="label">Answered</div>
+                <div class="value" id="detail-answered">0</div>
+            </div>
+            <div class="stat-card gold">
+                <div class="label">Qualified</div>
+                <div class="value" id="detail-qualified">0</div>
+            </div>
+            <div class="stat-card red">
+                <div class="label">Failed</div>
+                <div class="value" id="detail-failed">0</div>
+            </div>
+        </div>
+        <div class="detail-meta">
+            <strong>Total Contacts:</strong> <span id="detail-total-contacts">—</span><br>
+            <strong>Active Calls:</strong> <span id="detail-active-calls">—</span><br>
+            <strong>Started:</strong> <span id="detail-started">—</span><br>
+            <strong>Finished:</strong> <span id="detail-finished">—</span>
+        </div>
+        <div class="btn-group" id="detail-actions"></div>
+        <ul class="error-list" id="detail-errors"></ul>
+    </section>
+
+    <!-- PAGE: Test Call -->
+    <section id="page-test-call">
+        <div class="section-header">
+            <h2>Make a Test Call</h2>
+        </div>
+        <div class="form-card">
+            <form id="form-test-call">
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="inp-phone" placeholder="+12025551234" required>
+                    <div class="form-hint">E.164 format: +1 followed by 10 digits</div>
+                </div>
+                <div class="form-group">
+                    <label>Contact Name</label>
+                    <input type="text" id="inp-name" placeholder="John Smith">
+                </div>
+                <div class="form-group">
+                    <label>Company</label>
+                    <input type="text" id="inp-company" placeholder="ABC Trucking">
+                </div>
+                <button type="submit" class="btn btn-primary">Call Now</button>
+            </form>
+            <div class="form-result" id="result-test-call"></div>
+        </div>
+    </section>
+
+    <!-- PAGE: Send Email -->
+    <section id="page-send-email">
+        <div class="section-header">
+            <h2>Send Follow-Up Email</h2>
+        </div>
+        <div class="form-card">
+            <form id="form-send-email">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="inp-email" placeholder="trucker@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Contact Name</label>
+                    <input type="text" id="inp-email-name" placeholder="John Smith">
+                </div>
+                <button type="submit" class="btn btn-primary">Send Email</button>
+            </form>
+            <div class="form-result" id="result-send-email"></div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    // ===========================
+    // API Helper
+    // ===========================
+    async function api(method, path, body = null) {
+        const opts = {
+            method,
+            headers: { "Content-Type": "application/json" },
+        };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(path, opts);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        return data;
+    }
+
+    // ===========================
+    // Toast Notifications
+    // ===========================
+    function showToast(message, type = "info") {
+        const container = document.getElementById("toastContainer");
+        const toast = document.createElement("div");
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = "0";
+            toast.style.transition = "opacity 0.3s";
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // ===========================
+    // Navigation
+    // ===========================
+    let refreshInterval = null;
+    let currentCampaignId = null;
+
+    function switchPage(pageId) {
+        // Clear any auto-refresh
+        if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
+
+        // Update sections
+        document.querySelectorAll("main > section").forEach(s => s.classList.remove("active"));
+        const target = document.getElementById("page-" + pageId);
+        if (target) target.classList.add("active");
+
+        // Update nav tabs
+        document.querySelectorAll("nav button").forEach(b => {
+            b.classList.toggle("active", b.dataset.page === pageId);
+        });
+
+        // Load data & start auto-refresh for relevant pages
+        if (pageId === "dashboard") {
+            refreshDashboard();
+            refreshInterval = setInterval(refreshDashboard, 5000);
+        } else if (pageId === "campaigns") {
+            loadCampaigns();
+            refreshInterval = setInterval(loadCampaigns, 5000);
+        } else if (pageId === "campaign-detail" && currentCampaignId) {
+            viewCampaign(currentCampaignId);
+            refreshInterval = setInterval(() => viewCampaign(currentCampaignId), 5000);
+        }
+    }
+
+    // ===========================
+    // Health Check
+    // ===========================
+    async function checkHealth() {
+        try {
+            await api("GET", "/health");
+            document.getElementById("healthDot").classList.add("ok");
+            document.getElementById("healthText").textContent = "Healthy";
+        } catch {
+            document.getElementById("healthDot").classList.remove("ok");
+            document.getElementById("healthText").textContent = "Offline";
+        }
+    }
+
+    // ===========================
+    // Dashboard
+    // ===========================
+    async function refreshDashboard() {
+        try {
+            const [stats, campData] = await Promise.all([
+                api("GET", "/api/stats"),
+                api("GET", "/api/campaigns"),
+            ]);
+
+            document.getElementById("stat-total-calls").textContent = stats.total_calls;
+            document.getElementById("stat-answered").textContent = stats.total_answered;
+            document.getElementById("stat-qualified").textContent = stats.total_qualified;
+            document.getElementById("stat-failed").textContent = stats.total_failed;
+            document.getElementById("stat-active").textContent = stats.active_campaigns;
+            document.getElementById("stat-total-campaigns").textContent = stats.total_campaigns;
+
+            renderDashboardCampaigns(campData.campaigns);
+        } catch (e) {
+            console.error("Dashboard refresh failed:", e);
+        }
+    }
+
+    function renderDashboardCampaigns(campaigns) {
+        const tbody = document.getElementById("dashboard-campaigns-body");
+        if (!campaigns || campaigns.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No active campaigns</td></tr>';
+            return;
+        }
+        tbody.innerHTML = campaigns.map(c => `
+            <tr style="cursor:pointer" onclick="currentCampaignId='${c.campaign_id}'; switchPage('campaign-detail')">
+                <td><strong>${c.campaign_id}</strong></td>
+                <td>${badge(c.status)}</td>
+                <td>${c.calls_made}</td>
+                <td>${c.calls_answered}</td>
+                <td>${c.qualified_leads}</td>
+                <td>${campaignActions(c.campaign_id, c.status)}</td>
+            </tr>
+        `).join("");
+    }
+
+    // ===========================
+    // Campaigns List
+    // ===========================
+    async function loadCampaigns() {
+        try {
+            const data = await api("GET", "/api/campaigns");
+            const tbody = document.getElementById("campaigns-body");
+            if (!data.campaigns || data.campaigns.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No campaigns yet — start one from the Dashboard</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.campaigns.map(c => `
+                <tr>
+                    <td><a style="color:#3182ce;cursor:pointer;font-weight:600" onclick="currentCampaignId='${c.campaign_id}'; switchPage('campaign-detail')">${c.campaign_id}</a></td>
+                    <td>${badge(c.status)}</td>
+                    <td>${c.total_contacts}</td>
+                    <td>${c.calls_made}</td>
+                    <td>${c.calls_answered}</td>
+                    <td>${c.qualified_leads}</td>
+                    <td>${c.active_calls}</td>
+                    <td>${campaignActions(c.campaign_id, c.status)}</td>
+                </tr>
+            `).join("");
+        } catch (e) {
+            console.error("Load campaigns failed:", e);
+        }
+    }
+
+    // ===========================
+    // Campaign Detail
+    // ===========================
+    async function viewCampaign(campaignId) {
+        try {
+            const c = await api("GET", `/api/campaigns/${campaignId}`);
+
+            document.getElementById("detail-id").textContent = c.campaign_id;
+            const badgeEl = document.getElementById("detail-status-badge");
+            badgeEl.className = "badge badge-" + c.status;
+            badgeEl.textContent = c.status;
+
+            document.getElementById("detail-calls-made").textContent = c.calls_made;
+            document.getElementById("detail-answered").textContent = c.calls_answered;
+            document.getElementById("detail-qualified").textContent = c.qualified_leads;
+            document.getElementById("detail-failed").textContent = c.calls_failed;
+
+            document.getElementById("detail-total-contacts").textContent = c.total_contacts;
+            document.getElementById("detail-active-calls").textContent = c.active_calls;
+            document.getElementById("detail-started").textContent = c.started_at ? new Date(c.started_at * 1000).toLocaleString() : "—";
+            document.getElementById("detail-finished").textContent = c.finished_at ? new Date(c.finished_at * 1000).toLocaleString() : "—";
+
+            // Action buttons
+            const actionsEl = document.getElementById("detail-actions");
+            actionsEl.innerHTML = campaignActions(campaignId, c.status);
+
+            // Errors
+            const errorsEl = document.getElementById("detail-errors");
+            if (c.errors && c.errors.length > 0) {
+                errorsEl.innerHTML = "<h4 style='margin-bottom:8px;color:#742a2a'>Errors:</h4>" +
+                    c.errors.map(e => `<li>${e}</li>`).join("");
+            } else {
+                errorsEl.innerHTML = "";
+            }
+        } catch (e) {
+            showToast("Campaign not found or has been removed", "error");
+            switchPage("campaigns");
+        }
+    }
+
+    // ===========================
+    // Campaign Actions
+    // ===========================
+    async function pauseCampaign(id, event) {
+        if (event) event.stopPropagation();
+        try {
+            await api("POST", `/api/campaigns/${id}/pause`);
+            showToast("Campaign paused", "info");
+            refreshCurrentPage();
+        } catch (e) { showToast(e.message, "error"); }
+    }
+
+    async function resumeCampaign(id, event) {
+        if (event) event.stopPropagation();
+        try {
+            await api("POST", `/api/campaigns/${id}/resume`);
+            showToast("Campaign resumed", "success");
+            refreshCurrentPage();
+        } catch (e) { showToast(e.message, "error"); }
+    }
+
+    async function stopCampaign(id, event) {
+        if (event) event.stopPropagation();
+        if (!confirm("Are you sure you want to stop this campaign?")) return;
+        try {
+            await api("POST", `/api/campaigns/${id}/stop`);
+            showToast("Campaign stopping...", "info");
+            refreshCurrentPage();
+        } catch (e) { showToast(e.message, "error"); }
+    }
+
+    function refreshCurrentPage() {
+        const activePage = document.querySelector("main > section.active");
+        if (!activePage) return;
+        if (activePage.id === "page-dashboard") refreshDashboard();
+        else if (activePage.id === "page-campaigns") loadCampaigns();
+        else if (activePage.id === "page-campaign-detail" && currentCampaignId) viewCampaign(currentCampaignId);
+    }
+
+    // ===========================
+    // Helpers
+    // ===========================
+    function badge(status) {
+        return `<span class="badge badge-${status}">${status}</span>`;
+    }
+
+    function campaignActions(id, status) {
+        let html = "";
+        if (status === "running") {
+            html += `<button class="btn btn-warning btn-sm" onclick="pauseCampaign('${id}', event)">Pause</button> `;
+            html += `<button class="btn btn-danger btn-sm" onclick="stopCampaign('${id}', event)">Stop</button>`;
+        } else if (status === "paused") {
+            html += `<button class="btn btn-success btn-sm" onclick="resumeCampaign('${id}', event)">Resume</button> `;
+            html += `<button class="btn btn-danger btn-sm" onclick="stopCampaign('${id}', event)">Stop</button>`;
+        } else {
+            html += `<button class="btn btn-outline btn-sm" onclick="currentCampaignId='${id}'; switchPage('campaign-detail')">View</button>`;
+        }
+        return html;
+    }
+
+    // ===========================
+    // Form: Start Campaign
+    // ===========================
+    document.getElementById("form-start-campaign").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector("button[type=submit]");
+        const resultEl = document.getElementById("result-start-campaign");
+        btn.disabled = true;
+        resultEl.className = "form-result";
+        resultEl.style.display = "none";
+
+        try {
+            const data = await api("POST", "/api/campaigns", {
+                max_concurrent_calls: parseInt(document.getElementById("inp-concurrent").value) || 1,
+                delay_between_calls: parseFloat(document.getElementById("inp-delay").value) || 5.0,
+                max_calls: parseInt(document.getElementById("inp-max-calls").value) || 0,
+            });
+            resultEl.className = "form-result success";
+            resultEl.textContent = `Campaign started! ID: ${data.campaign_id}`;
+            resultEl.style.display = "block";
+            showToast(`Campaign ${data.campaign_id} started!`, "success");
+        } catch (err) {
+            resultEl.className = "form-result error";
+            resultEl.textContent = `Error: ${err.message}`;
+            resultEl.style.display = "block";
+            showToast(err.message, "error");
+        }
+        btn.disabled = false;
+    });
+
+    // ===========================
+    // Form: Test Call
+    // ===========================
+    document.getElementById("form-test-call").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector("button[type=submit]");
+        const resultEl = document.getElementById("result-test-call");
+        btn.disabled = true;
+        resultEl.className = "form-result";
+        resultEl.style.display = "none";
+
+        try {
+            const data = await api("POST", "/api/calls/single", {
+                phone_number: document.getElementById("inp-phone").value.trim(),
+                contact_name: document.getElementById("inp-name").value.trim(),
+                company: document.getElementById("inp-company").value.trim(),
+            });
+            resultEl.className = "form-result success";
+            resultEl.textContent = `Call initiated! SID: ${data.call_sid}`;
+            resultEl.style.display = "block";
+            showToast("Call initiated!", "success");
+        } catch (err) {
+            resultEl.className = "form-result error";
+            resultEl.textContent = `Error: ${err.message}`;
+            resultEl.style.display = "block";
+            showToast(err.message, "error");
+        }
+        btn.disabled = false;
+    });
+
+    // ===========================
+    // Form: Send Email
+    // ===========================
+    document.getElementById("form-send-email").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector("button[type=submit]");
+        const resultEl = document.getElementById("result-send-email");
+        btn.disabled = true;
+        resultEl.className = "form-result";
+        resultEl.style.display = "none";
+
+        try {
+            await api("POST", "/api/email/send-followup", {
+                to_email: document.getElementById("inp-email").value.trim(),
+                contact_name: document.getElementById("inp-email-name").value.trim() || "there",
+            });
+            resultEl.className = "form-result success";
+            resultEl.textContent = "Follow-up email sent successfully!";
+            resultEl.style.display = "block";
+            showToast("Email sent!", "success");
+        } catch (err) {
+            resultEl.className = "form-result error";
+            resultEl.textContent = `Error: ${err.message}`;
+            resultEl.style.display = "block";
+            showToast(err.message, "error");
+        }
+        btn.disabled = false;
+    });
+
+    // ===========================
+    // Tab Click Handlers
+    // ===========================
+    document.querySelectorAll("nav button").forEach(btn => {
+        btn.addEventListener("click", () => switchPage(btn.dataset.page));
+    });
+
+    // ===========================
+    // Init
+    // ===========================
+    checkHealth();
+    setInterval(checkHealth, 30000);
+    switchPage("dashboard");
+</script>
+
+</body>
+</html>
