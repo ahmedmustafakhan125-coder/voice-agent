@@ -1,18 +1,9 @@
 """Unit tests for the dashboard API."""
-import pytest
-from fastapi.testclient import TestClient
-
 from app.api.dashboard import build_overview
 from app.campaign import dialer as dialer_mod
 from app.campaign.dialer import CampaignConfig, CampaignDialer
 
-
-@pytest.fixture
-def client(call_log):
-    from app.main import app
-
-    return TestClient(app)
-
+# `client` fixture (local browser) comes from conftest.py
 
 def _seed(log):
     log.record_initiated("A", contact_name="Alice", company="Acme", phone="+1111", campaign_id="c1")

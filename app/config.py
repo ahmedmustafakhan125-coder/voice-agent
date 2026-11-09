@@ -43,6 +43,15 @@ class Settings(BaseSettings):
     cost_per_minute: float = 0.02
     industry_cost_per_minute: float = 0.09
 
+    # Dashboard login. The setup screen stores a salted hash; a plain
+    # DASHBOARD_PASSWORD is also accepted (handy for Docker env vars).
+    dashboard_password: str = ""
+    dashboard_password_hash: str = ""
+
+    # Comma-separated origins allowed to call the API cross-site (empty = none;
+    # the built-in dashboard is same-origin and doesn't need CORS).
+    cors_origins: str = ""
+
     model_config = {"env_file": ENV_FILE, "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
