@@ -1,848 +1,1356 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Agent Dashboard</title>
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Agent</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232a78d6'/%3E%3Cpath d='M8.6 5.5l1.6 3.4-1.4 1.1a8.6 8.6 0 004.2 4.2l1.1-1.4 3.4 1.6-.6 2.9a1.2 1.2 0 01-1.3.9A11.8 11.8 0 015.8 7.4a1.2 1.2 0 01.9-1.3z' fill='white'/%3E%3C/svg%3E">
+<style>
+/* ============================================================ tokens */
+:root {
+  color-scheme: light;
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --surface-3: #e8ebf0;
+  --border: #e3e6eb;
+  --text: #0f1419;
+  --text-2: #4a5361;
+  --muted: #747e8d;
+  --accent: #2a78d6;
+  --accent-hover: #256abf;
+  --accent-soft: #e6f0fc;
+  --on-accent: #ffffff;
+  --s1: #2a78d6;            /* Calls     */
+  --s2: #eb6834;            /* Answered  */
+  --s3: #1baf7a;            /* Qualified */
+  --good: #0ca30c;  --good-text: #006300; --good-soft: #e5f5e5;
+  --warn: #fab219;  --warn-text: #8a5a00; --warn-soft: #fff4dc;
+  --crit: #d03b3b;  --crit-text: #b02a2a; --crit-soft: #fdeaea;
+  --grid: #edf0f3;
+  --shadow: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+  --shadow-lg: 0 12px 32px rgba(16,24,40,.14);
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0e11; --surface: #17191e; --surface-2: #1e2127; --surface-3: #262a31;
+    --border: #2a2e36; --text: #f0efec; --text-2: #c3c2b7; --muted: #8b909a;
+    --accent: #3987e5; --accent-hover: #5598e7; --accent-soft: #16263a; --on-accent: #ffffff;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --good-text: #3fc23f; --good-soft: #10261a; --warn-text: #fab219; --warn-soft: #2a2310;
+    --crit-text: #e66767; --crit-soft: #2c1517; --grid: #23262d;
+    --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lg: 0 12px 32px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0e11; --surface: #17191e; --surface-2: #1e2127; --surface-3: #262a31;
+  --border: #2a2e36; --text: #f0efec; --text-2: #c3c2b7; --muted: #8b909a;
+  --accent: #3987e5; --accent-hover: #5598e7; --accent-soft: #16263a; --on-accent: #ffffff;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --good-text: #3fc23f; --good-soft: #10261a; --warn-text: #fab219; --warn-soft: #2a2310;
+  --crit-text: #e66767; --crit-soft: #2c1517; --grid: #23262d;
+  --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lg: 0 12px 32px rgba(0,0,0,.5);
+}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #f0f2f5;
-            color: #1a202c;
-            min-height: 100vh;
-        }
+/* ============================================================ base */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { margin: 0; line-height: 1.25; letter-spacing: -0.01em; }
+a { color: var(--accent); }
+button, input, select { font: inherit; color: inherit; }
+.hidden { display: none !important; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-        /* === Header === */
-        header {
-            background: #1a202c;
-            color: #fff;
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        header h1 { font-size: 1.25rem; font-weight: 600; }
-        .health-badge {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            padding: 6px 14px;
-            border-radius: 20px;
-            background: rgba(255,255,255,0.1);
-        }
-        .health-dot {
-            width: 10px; height: 10px;
-            border-radius: 50%;
-            background: #e53e3e;
-        }
-        .health-dot.ok { background: #38a169; }
+/* ============================================================ layout */
+.app { display: grid; grid-template-columns: 236px 1fr; min-height: 100vh; }
+.sidebar {
+  background: var(--surface); border-right: 1px solid var(--border);
+  padding: 20px 14px; display: flex; flex-direction: column; gap: 4px;
+  position: sticky; top: 0; height: 100vh;
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; }
+.brand-mark {
+  width: 34px; height: 34px; border-radius: 10px; background: var(--accent);
+  display: grid; place-items: center; flex: none;
+}
+.brand-name { font-weight: 700; font-size: 15px; }
+.brand-sub { font-size: 12px; color: var(--muted); }
+.nav-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 12px; border: 0; border-radius: 9px; background: transparent;
+  color: var(--text-2); cursor: pointer; text-align: left; font-weight: 500;
+}
+.nav-btn svg { width: 18px; height: 18px; flex: none; }
+.nav-btn:hover { background: var(--surface-2); color: var(--text); }
+.nav-btn.active { background: var(--accent-soft); color: var(--accent); }
+.nav-badge {
+  margin-left: auto; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px;
+  background: var(--warn-soft); color: var(--warn-text);
+}
+.sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+.health { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12.5px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.ok { background: var(--good); }
+.dot.bad { background: var(--crit); }
+.dot.live { background: var(--good); box-shadow: 0 0 0 0 rgba(12,163,12,.5); animation: pulse 1.6s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 7px rgba(12,163,12,0); } 100% { box-shadow: 0 0 0 0 rgba(12,163,12,0); } }
 
-        /* === Navigation === */
-        nav {
-            display: flex;
-            gap: 2px;
-            padding: 0 24px;
-            background: #fff;
-            border-bottom: 1px solid #e2e8f0;
-            overflow-x: auto;
-        }
-        nav button {
-            padding: 14px 20px;
-            border: none;
-            background: transparent;
-            border-bottom: 3px solid transparent;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #718096;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-        nav button:hover { color: #2d3748; background: #f7fafc; }
-        nav button.active { color: #3182ce; border-bottom-color: #3182ce; }
+main { padding: 28px 32px 48px; min-width: 0; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.page-head h1 { font-size: 24px; font-weight: 700; }
+.page-head p { margin: 4px 0 0; color: var(--muted); }
+.view { display: none; }
+.view.active { display: block; animation: fade .18s ease-out; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-        /* === Main Content === */
-        main { max-width: 1200px; margin: 0 auto; padding: 24px; }
-        section { display: none; animation: fadeIn 0.2s ease; }
-        section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* ============================================================ components */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px;
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.card-head h3 { font-size: 15px; font-weight: 600; }
+.card-sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.grid { display: grid; gap: 16px; }
+.kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 16px; }
+.two { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); margin-bottom: 16px; }
+.halves { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 
-        /* === Cards Grid === */
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-        .stat-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 20px;
-            border-left: 4px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            transition: transform 0.15s;
-        }
-        .stat-card:hover { transform: translateY(-2px); }
-        .stat-card .label { font-size: 0.8rem; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-        .stat-card .value { font-size: 2rem; font-weight: 700; }
-        .stat-card.blue { border-left-color: #3182ce; }
-        .stat-card.blue .value { color: #3182ce; }
-        .stat-card.green { border-left-color: #38a169; }
-        .stat-card.green .value { color: #38a169; }
-        .stat-card.gold { border-left-color: #d69e2e; }
-        .stat-card.gold .value { color: #d69e2e; }
-        .stat-card.red { border-left-color: #e53e3e; }
-        .stat-card.red .value { color: #e53e3e; }
-        .stat-card.indigo { border-left-color: #5a67d8; }
-        .stat-card.indigo .value { color: #5a67d8; }
+.kpi { padding: 18px 18px 16px; }
+.kpi-label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; font-weight: 500; }
+.kpi-icon { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); color: var(--text-2); }
+.kpi-icon svg { width: 15px; height: 15px; }
+.kpi-value { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin-top: 10px; line-height: 1.1; }
+.kpi-foot { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+.kpi-foot strong { color: var(--text-2); font-weight: 600; }
+.kpi.hero { background: linear-gradient(135deg, var(--accent) 0%, #1c5cab 100%); border-color: transparent; color: #fff; }
+.kpi.hero .kpi-label, .kpi.hero .kpi-foot, .kpi.hero .kpi-foot strong { color: rgba(255,255,255,.88); }
+.kpi.hero .kpi-icon { background: rgba(255,255,255,.18); color: #fff; }
 
-        /* === Section Headers === */
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .section-header h2 { font-size: 1.4rem; font-weight: 600; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 9px 16px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-weight: 600; font-size: 13.5px;
+  transition: background .12s, border-color .12s, opacity .12s; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-danger { color: var(--crit-text); }
+.btn-sm { padding: 6px 11px; font-size: 12.5px; border-radius: 8px; }
+.btn svg { width: 16px; height: 16px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-        /* === Tables === */
-        .table-wrap { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        thead { background: #f7fafc; }
-        th { padding: 12px 16px; text-align: left; font-weight: 600; color: #4a5568; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-        td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
-        tbody tr:hover { background: #f7fafc; }
-        .empty-state { text-align: center; padding: 40px; color: #a0aec0; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 5px 11px; border-radius: 7px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
 
-        /* === Status Badges === */
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            text-transform: capitalize;
-        }
-        .badge-running { background: #c6f6d5; color: #22543d; }
-        .badge-paused { background: #fefcbf; color: #744210; }
-        .badge-completed { background: #bee3f8; color: #2a4365; }
-        .badge-stopping { background: #feebc8; color: #7b341e; }
-        .badge-error { background: #fed7d7; color: #742a2a; }
-        .badge-idle { background: #e2e8f0; color: #4a5568; }
+label.field { display: block; margin-bottom: 14px; }
+.field-label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.field-help { display: block; color: var(--muted); font-size: 12px; margin-top: 5px; }
+input[type=text], input[type=password], input[type=number], input[type=tel], input[type=email], input[type=search], select {
+  width: 100%; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--surface); outline: none; transition: border-color .12s, box-shadow .12s;
+}
+input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0 14px; }
 
-        /* === Buttons === */
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary { background: #3182ce; color: #fff; }
-        .btn-primary:hover:not(:disabled) { background: #2b6cb0; }
-        .btn-success { background: #38a169; color: #fff; }
-        .btn-success:hover:not(:disabled) { background: #2f855a; }
-        .btn-warning { background: #d69e2e; color: #fff; }
-        .btn-warning:hover:not(:disabled) { background: #b7791f; }
-        .btn-danger { background: #e53e3e; color: #fff; }
-        .btn-danger:hover:not(:disabled) { background: #c53030; }
-        .btn-outline { background: transparent; color: #4a5568; border: 1px solid #e2e8f0; }
-        .btn-outline:hover:not(:disabled) { background: #f7fafc; }
-        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 99px;
+  font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--surface-2); color: var(--text-2);
+}
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pill.good { background: var(--good-soft); color: var(--good-text); }
+.pill.warn { background: var(--warn-soft); color: var(--warn-text); }
+.pill.crit { background: var(--crit-soft); color: var(--crit-text); }
+.pill.info { background: var(--accent-soft); color: var(--accent); }
 
-        /* === Forms === */
-        .form-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 32px;
-            max-width: 520px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        }
-        .form-group { margin-bottom: 20px; }
-        .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 6px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: border-color 0.15s;
-        }
-        .form-group input:focus { outline: none; border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
-        .form-hint { font-size: 0.78rem; color: #a0aec0; margin-top: 4px; }
-        .form-result {
-            margin-top: 20px;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            display: none;
-        }
-        .form-result.success { display: block; background: #c6f6d5; color: #22543d; }
-        .form-result.error { display: block; background: #fed7d7; color: #742a2a; }
+.table-wrap { overflow-x: auto; margin: 0 -20px -20px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 11px 20px; text-align: left; border-top: 1px solid var(--border); white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface-2); border-top: 0; }
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover { background: var(--surface-2); }
+td.wrap { white-space: normal; min-width: 220px; color: var(--text-2); }
+.who strong { display: block; font-weight: 600; }
+.who span { color: var(--muted); font-size: 12.5px; }
+.empty { text-align: center; color: var(--muted); padding: 36px 20px !important; white-space: normal; }
 
-        /* === Info Box === */
-        .info-box {
-            margin-top: 20px;
-            padding: 16px;
-            background: #ebf8ff;
-            border-radius: 8px;
-            color: #2a4365;
-            font-size: 0.85rem;
-            line-height: 1.6;
-        }
+.banner {
+  display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: var(--radius);
+  background: var(--warn-soft); border: 1px solid transparent; margin-bottom: 16px; flex-wrap: wrap;
+}
+.banner .grow { flex: 1; min-width: 200px; }
+.banner strong { display: block; }
+.progress { height: 6px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
 
-        /* === Back Link === */
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #3182ce;
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-        .back-link:hover { text-decoration: underline; }
+/* ============================================================ charts */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.chart-card { display: flex; flex-direction: column; }
+.chart { position: relative; flex: 1; min-height: 240px; }
+.chart svg { display: block; width: 100%; overflow: visible; position: absolute; top: 0; left: 0; }
+.chart .axis text { fill: var(--muted); font-size: 11px; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .baseline { stroke: var(--border); stroke-width: 1; }
+.chart .hit { fill: transparent; cursor: default; }
+.chart .hit:hover, .chart .hit:focus { fill: var(--surface-2); fill-opacity: .7; outline: none; }
+.chart.loading { opacity: .55; transition: opacity .2s; }
+.tooltip {
+  position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: var(--shadow-lg); padding: 10px 12px; font-size: 12.5px; min-width: 140px; z-index: 5;
+}
+.tooltip .tt-title { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.tooltip .tt-row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.tooltip .tt-row i { width: 12px; height: 2px; border-radius: 1px; display: inline-block; }
+.tooltip .tt-row strong { min-width: 22px; text-align: right; }
+.tooltip .tt-row span { color: var(--muted); }
 
-        /* === Campaign Detail === */
-        .detail-meta { margin: 20px 0; font-size: 0.9rem; color: #4a5568; line-height: 2; }
-        .detail-meta strong { color: #2d3748; }
-        .error-list { margin-top: 16px; }
-        .error-list li { background: #fed7d7; color: #742a2a; padding: 8px 14px; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; list-style: none; }
+.hbars { display: flex; flex-direction: column; gap: 12px; }
+.hbar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+.hbar-top span:first-child { color: var(--text-2); }
+.hbar-top strong { font-weight: 600; }
+.hbar-track { height: 10px; border-radius: 0 4px 4px 0; }
+.hbar-fill { height: 100%; border-radius: 0 4px 4px 0; background: var(--s1); min-width: 2px; transition: width .4s ease; }
+.hbar-fill.alt { background: var(--muted); opacity: .45; }
 
-        /* === Toast === */
-        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
-        .toast {
-            padding: 14px 20px;
-            border-radius: 10px;
-            color: #fff;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            animation: slideIn 0.3s ease;
-            max-width: 360px;
-        }
-        .toast-success { background: #38a169; }
-        .toast-error { background: #e53e3e; }
-        .toast-info { background: #3182ce; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+/* ============================================================ drawer / modal / toast */
+.scrim { position: fixed; inset: 0; background: rgba(10,12,16,.45); z-index: 40; animation: fade .15s; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--surface);
+  z-index: 41; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; animation: slide .2s ease-out;
+}
+@keyframes slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.drawer-head { padding: 20px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; }
+.drawer-body { padding: 18px 22px 28px; overflow-y: auto; flex: 1; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.fact { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.fact span { display: block; color: var(--muted); font-size: 12px; }
+.fact strong { font-weight: 600; word-break: break-word; }
+.summary { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; margin-bottom: 18px; color: var(--text); }
+.chat { display: flex; flex-direction: column; gap: 8px; }
+.bubble { max-width: 85%; padding: 9px 13px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; }
+.bubble.agent { background: var(--surface-2); align-self: flex-start; border-bottom-left-radius: 4px; }
+.bubble.user { background: var(--accent); color: var(--on-accent); align-self: flex-end; border-bottom-right-radius: 4px; }
+.bubble-who { font-size: 11px; color: var(--muted); margin: 6px 4px 0; }
+.bubble-who.user { align-self: flex-end; }
 
-        /* === Quick Actions === */
-        .quick-actions { margin-bottom: 24px; }
-        .quick-actions h3 { font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: #4a5568; }
+.toasts { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }
+.toast {
+  background: var(--text); color: var(--bg); padding: 11px 16px; border-radius: 10px; box-shadow: var(--shadow-lg);
+  font-weight: 500; max-width: 380px; animation: fade .2s;
+}
+.toast.error { background: var(--crit); color: #fff; }
+.toast.success { background: var(--good-text); color: #fff; }
 
-        /* === Responsive === */
-        @media (max-width: 768px) {
-            main { padding: 16px; }
-            .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .stat-card { padding: 14px; }
-            .stat-card .value { font-size: 1.5rem; }
-            .form-card { padding: 20px; }
-            nav button { padding: 12px 14px; font-size: 0.82rem; }
-        }
-    </style>
+/* ============================================================ setup */
+.steps { display: flex; flex-direction: column; gap: 12px; }
+.step { padding: 0; overflow: hidden; }
+.step-head { display: flex; align-items: center; gap: 14px; padding: 16px 20px; cursor: pointer; user-select: none; }
+.step-num {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  font-weight: 700; font-size: 13px; background: var(--surface-2); color: var(--text-2);
+}
+.step.done .step-num { background: var(--good-soft); color: var(--good-text); }
+.step-title { flex: 1; min-width: 0; }
+.step-title strong { display: block; font-size: 14.5px; }
+.step-title span { color: var(--muted); font-size: 12.5px; }
+.step-chevron { transition: transform .15s; color: var(--muted); }
+.step.open .step-chevron { transform: rotate(180deg); }
+.step-body { display: none; padding: 4px 20px 20px 64px; }
+.step.open .step-body { display: block; }
+.check-result { margin-top: 12px; padding: 10px 12px; border-radius: 9px; font-size: 13px; }
+.check-result.ok { background: var(--good-soft); color: var(--good-text); }
+.check-result.fail { background: var(--crit-soft); color: var(--crit-text); }
+.copy-box {
+  display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 9px; padding: 8px 8px 8px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; margin: 6px 0 12px;
+}
+.copy-box code { flex: 1; overflow-x: auto; white-space: nowrap; }
+.dropzone {
+  border: 1.5px dashed var(--border); border-radius: 10px; padding: 16px; text-align: center; color: var(--muted);
+  cursor: pointer; margin-bottom: 14px; transition: border-color .12s, background .12s;
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.sheet-cols { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 14px; }
+.sheet-cols span { background: var(--surface-2); border-radius: 6px; padding: 2px 8px; font-size: 12px; color: var(--text-2); }
+
+/* ============================================================ auth screen */
+.auth-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.auth-card { width: min(400px, 100%); padding: 32px 28px; }
+.auth-card .brand { padding: 0 0 22px; }
+.auth-card h2 { font-size: 20px; margin-bottom: 6px; }
+.auth-card p { color: var(--muted); margin: 0 0 20px; }
+.auth-error { color: var(--crit-text); font-size: 13px; min-height: 20px; margin: -4px 0 10px; }
+
+/* ============================================================ responsive */
+@media (max-width: 1100px) { .two { grid-template-columns: 1fr; } }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar {
+    position: sticky; top: 0; z-index: 30; height: auto; flex-direction: row; align-items: center;
+    padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--border); overflow-x: auto; gap: 2px;
+  }
+  .brand { padding: 0 10px 0 0; }
+  .brand-sub, .brand-name, .nav-btn .label-text, .health span, .nav-badge { display: none; }
+  .nav-btn { width: auto; padding: 9px 10px; }
+  .sidebar-foot { margin: 0 0 0 auto; flex-direction: row; }
+  .health { padding: 8px; }
+  main { padding: 20px 16px 40px; }
+  .step-body { padding-left: 20px; }
+  .facts { grid-template-columns: 1fr; }
+  .table-wrap { margin: 0 -20px -20px; }
+}
+</style>
 </head>
 <body>
 
-<!-- Header -->
-<header>
-    <h1>Voice Agent Dashboard</h1>
-    <div class="health-badge">
-        <div class="health-dot" id="healthDot"></div>
-        <span id="healthText">Checking...</span>
+<!-- ================================================================ AUTH -->
+<div id="auth" class="auth-screen hidden">
+  <div class="card auth-card">
+    <div class="brand">
+      <div class="brand-mark" data-icon="phone-white"></div>
+      <div><div class="brand-name">Voice Agent</div><div class="brand-sub">Trucking dispatch caller</div></div>
     </div>
-</header>
 
-<!-- Navigation -->
-<nav>
-    <button class="active" data-page="dashboard">Dashboard</button>
-    <button data-page="start-campaign">Start Campaign</button>
-    <button data-page="campaigns">Campaigns</button>
-    <button data-page="test-call">Test Call</button>
-    <button data-page="send-email">Send Email</button>
-</nav>
+    <form id="form-login" class="hidden">
+      <h2>Welcome back</h2>
+      <p>Enter your dashboard password.</p>
+      <label class="field"><span class="field-label">Password</span>
+        <input type="password" id="login-password" autocomplete="current-password" required></label>
+      <div class="auth-error" id="login-error"></div>
+      <button class="btn btn-primary" style="width:100%" type="submit">Log in</button>
+    </form>
 
-<!-- Main Content -->
-<main>
+    <form id="form-create" class="hidden">
+      <h2>Create your password</h2>
+      <p>This protects your dashboard and API keys once the server is online. You'll need it to log in from anywhere.</p>
+      <label class="field"><span class="field-label">New password</span>
+        <input type="password" id="create-password" autocomplete="new-password" minlength="8" required>
+        <span class="field-help">At least 8 characters</span></label>
+      <label class="field"><span class="field-label">Confirm password</span>
+        <input type="password" id="create-confirm" autocomplete="new-password" minlength="8" required></label>
+      <div class="auth-error" id="create-error"></div>
+      <button class="btn btn-primary" style="width:100%" type="submit">Create password &amp; continue</button>
+    </form>
 
-    <!-- PAGE: Dashboard -->
-    <section id="page-dashboard" class="active">
-        <div class="section-header">
-            <h2>Overview</h2>
+    <div id="auth-remote" class="hidden">
+      <h2>Finish setup on the server</h2>
+      <p>No dashboard password exists yet. For security it can only be created from the server itself.</p>
+      <p>Open <strong>http://localhost:8000</strong> on the machine running Voice Agent, or set <code>DASHBOARD_PASSWORD</code> in its <code>.env</code> file and restart.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ APP -->
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark" data-icon="phone-white"></div>
+      <div><div class="brand-name">Voice Agent</div><div class="brand-sub">Dispatch caller</div></div>
+    </div>
+    <button class="nav-btn active" data-view="overview"><span data-icon="grid"></span><span class="label-text">Overview</span></button>
+    <button class="nav-btn" data-view="calls"><span data-icon="list"></span><span class="label-text">Calls</span></button>
+    <button class="nav-btn" data-view="campaigns"><span data-icon="rocket"></span><span class="label-text">Campaigns</span></button>
+    <button class="nav-btn" data-view="setup"><span data-icon="settings"></span><span class="label-text">Setup</span><span class="nav-badge hidden" id="setup-badge"></span></button>
+    <button class="nav-btn" data-view="test"><span data-icon="phone"></span><span class="label-text">Test call</span></button>
+    <div class="sidebar-foot">
+      <button class="nav-btn" data-view="account"><span data-icon="user"></span><span class="label-text">Account</span></button>
+      <button class="nav-btn" id="theme-toggle" title="Toggle theme"><span data-icon="moon"></span><span class="label-text">Theme</span></button>
+      <div class="health" title="Server health"><i class="dot" id="health-dot"></i><span id="health-text">Checking…</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- ------------------------------------------------ OVERVIEW -->
+    <section class="view active" id="view-overview">
+      <div class="page-head">
+        <div><h1>Overview</h1><p>How your AI caller is doing</p></div>
+        <div class="btn-row">
+          <span class="muted small" id="updated-at"></span>
+          <button class="btn btn-primary" data-goto="campaigns"><span data-icon="rocket"></span>Start campaign</button>
         </div>
-        <div class="stat-grid">
-            <div class="stat-card blue">
-                <div class="label">Total Calls</div>
-                <div class="value" id="stat-total-calls">0</div>
+      </div>
+
+      <div class="banner hidden" id="setup-banner">
+        <div class="grow">
+          <strong id="setup-banner-title">Finish setup to start calling</strong>
+          <span class="small muted" id="setup-banner-text"></span>
+          <div class="progress" style="margin-top:8px;max-width:340px"><div id="setup-banner-bar" style="width:0"></div></div>
+        </div>
+        <button class="btn btn-primary" data-goto="setup">Continue setup</button>
+      </div>
+
+      <div class="grid kpis">
+        <div class="card kpi hero">
+          <div class="kpi-label"><span class="kpi-icon" data-icon="phone"></span>Calls done</div>
+          <div class="kpi-value num" id="k-total">0</div>
+          <div class="kpi-foot"><strong class="num" id="k-today">0</strong> today · <strong class="num" id="k-active">0</strong> live now</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label"><span class="kpi-icon" data-icon="headset"></span>Answered</div>
+          <div class="kpi-value num" id="k-answered">0</div>
+          <div class="kpi-foot"><strong class="num" id="k-answer-rate">0%</strong> pick-up rate</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label"><span class="kpi-icon" data-icon="star"></span>Qualified leads</div>
+          <div class="kpi-value num" id="k-qualified">0</div>
+          <div class="kpi-foot"><strong class="num" id="k-qualify-rate">0%</strong> of answered · <strong class="num" id="k-followup">0</strong> follow-ups</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label"><span class="kpi-icon" data-icon="mail"></span>Emails collected</div>
+          <div class="kpi-value num" id="k-emails">0</div>
+          <div class="kpi-foot"><strong class="num" id="k-failed">0</strong> calls didn't connect</div>
+        </div>
+        <div class="card kpi">
+          <div class="kpi-label"><span class="kpi-icon" data-icon="dollar"></span>Saved vs industry</div>
+          <div class="kpi-value num" id="k-saved">$0.00</div>
+          <div class="kpi-foot"><strong class="num" id="k-minutes">0</strong> talk minutes · avg <strong class="num" id="k-avg">0s</strong></div>
+        </div>
+      </div>
+
+      <div class="grid two">
+        <div class="card chart-card">
+          <div class="card-head">
+            <div><h3>Calls per day</h3><div class="card-sub">Hover a day for the numbers</div></div>
+            <div class="btn-row">
+              <div class="seg" id="range-seg">
+                <button data-days="7">7d</button><button data-days="14" class="on">14d</button><button data-days="30">30d</button>
+              </div>
+              <div class="seg" id="daily-mode">
+                <button data-mode="chart" class="on">Chart</button><button data-mode="table">Table</button>
+              </div>
             </div>
-            <div class="stat-card green">
-                <div class="label">Answered</div>
-                <div class="value" id="stat-answered">0</div>
-            </div>
-            <div class="stat-card gold">
-                <div class="label">Qualified Leads</div>
-                <div class="value" id="stat-qualified">0</div>
-            </div>
-            <div class="stat-card red">
-                <div class="label">Failed</div>
-                <div class="value" id="stat-failed">0</div>
-            </div>
-            <div class="stat-card indigo">
-                <div class="label">Active Campaigns</div>
-                <div class="value" id="stat-active">0</div>
-            </div>
-            <div class="stat-card indigo">
-                <div class="label">Total Campaigns</div>
-                <div class="value" id="stat-total-campaigns">0</div>
-            </div>
+          </div>
+          <div class="legend" style="margin-bottom:10px">
+            <span><i style="background:var(--s1)"></i>Calls</span>
+            <span><i style="background:var(--s2)"></i>Answered</span>
+            <span><i style="background:var(--s3)"></i>Qualified</span>
+          </div>
+          <div class="chart" id="daily-chart"></div>
+          <div class="table-wrap hidden" id="daily-table" style="margin:0"></div>
         </div>
 
-        <div class="quick-actions">
-            <h3>Quick Actions</h3>
-            <div class="btn-group">
-                <button class="btn btn-primary" onclick="switchPage('start-campaign')">Start New Campaign</button>
-                <button class="btn btn-outline" onclick="switchPage('test-call')">Make Test Call</button>
-            </div>
+        <div class="grid" style="gap:16px">
+          <div class="card">
+            <div class="card-head"><div><h3>Call outcomes</h3><div class="card-sub">All calls to date</div></div></div>
+            <div class="hbars" id="outcomes"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><h3>Cost per minute</h3><div class="card-sub" id="cost-sub">This agent vs typical voice-AI platforms</div></div></div>
+            <div class="hbars" id="cost-bars"></div>
+          </div>
         </div>
+      </div>
 
-        <div class="section-header">
-            <h3>Active Campaigns</h3>
+      <div class="card">
+        <div class="card-head">
+          <div><h3>Recent calls</h3><div class="card-sub">Click a call to read the conversation</div></div>
+          <button class="btn btn-sm" data-goto="calls">View all</button>
         </div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Campaign ID</th>
-                        <th>Status</th>
-                        <th>Calls Made</th>
-                        <th>Answered</th>
-                        <th>Qualified</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="dashboard-campaigns-body">
-                    <tr><td colspan="6" class="empty-state">No active campaigns</td></tr>
-                </tbody>
-            </table>
-        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Contact</th><th>Status</th><th>Outcome</th><th>Duration</th><th>When</th></tr></thead>
+          <tbody id="recent-body"></tbody>
+        </table></div>
+      </div>
     </section>
 
-    <!-- PAGE: Start Campaign -->
-    <section id="page-start-campaign">
-        <div class="section-header">
-            <h2>Start New Campaign</h2>
+    <!-- ------------------------------------------------ CALLS -->
+    <section class="view" id="view-calls">
+      <div class="page-head"><div><h1>Calls</h1><p>Every call your agent has made</p></div></div>
+      <div class="card">
+        <div class="btn-row" style="margin-bottom:16px">
+          <input type="search" id="calls-search" placeholder="Search name, company, phone, email…" style="max-width:300px">
+          <select id="calls-outcome" style="max-width:180px">
+            <option value="">All outcomes</option>
+            <option value="qualified">Qualified</option>
+            <option value="follow_up">Follow-up</option>
+            <option value="not_interested">Not interested</option>
+            <option value="voicemail">Voicemail</option>
+            <option value="no_answer">No answer</option>
+          </select>
+          <select id="calls-status" style="max-width:180px">
+            <option value="">All statuses</option>
+            <option value="completed">Completed</option>
+            <option value="in-progress">Live</option>
+            <option value="ringing">Ringing</option>
+            <option value="no-answer">No answer</option>
+            <option value="busy">Busy</option>
+            <option value="failed">Failed</option>
+          </select>
         </div>
-        <div class="form-card">
-            <form id="form-start-campaign">
-                <div class="form-group">
-                    <label>Max Concurrent Calls</label>
-                    <input type="number" id="inp-concurrent" value="1" min="1" max="10">
-                    <div class="form-hint">How many calls to run at the same time (1-10)</div>
-                </div>
-                <div class="form-group">
-                    <label>Delay Between Calls (seconds)</label>
-                    <input type="number" id="inp-delay" value="5" min="1" step="0.5">
-                    <div class="form-hint">Wait time before dialing the next contact</div>
-                </div>
-                <div class="form-group">
-                    <label>Max Calls</label>
-                    <input type="number" id="inp-max-calls" value="0" min="0">
-                    <div class="form-hint">0 = call all pending contacts in the sheet</div>
-                </div>
-                <button type="submit" class="btn btn-success">Start Campaign</button>
-            </form>
-            <div class="info-box">
-                Contacts will be read from your Google Sheet. The agent will call all rows with a blank or "pending" status. Make sure your sheet has Name, Phone, and Company columns filled in.
-            </div>
-            <div class="form-result" id="result-start-campaign"></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Contact</th><th>Phone</th><th>Status</th><th>Outcome</th><th>Email</th><th>Duration</th><th>When</th></tr></thead>
+          <tbody id="calls-body"></tbody>
+        </table></div>
+        <div class="btn-row" style="justify-content:space-between;margin-top:36px">
+          <span class="muted small" id="calls-range"></span>
+          <div class="btn-row">
+            <button class="btn btn-sm" id="calls-prev">Previous</button>
+            <button class="btn btn-sm" id="calls-next">Next</button>
+          </div>
         </div>
+      </div>
     </section>
 
-    <!-- PAGE: Campaigns List -->
-    <section id="page-campaigns">
-        <div class="section-header">
-            <h2>All Campaigns</h2>
-            <button class="btn btn-outline btn-sm" onclick="loadCampaigns()">Refresh</button>
+    <!-- ------------------------------------------------ CAMPAIGNS -->
+    <section class="view" id="view-campaigns">
+      <div class="page-head"><div><h1>Campaigns</h1><p>Call everyone marked “pending” in your Google Sheet</p></div></div>
+      <div class="grid halves" style="margin-bottom:16px;align-items:start">
+        <form class="card" id="form-campaign">
+          <div class="card-head"><div><h3>Start a campaign</h3><div class="card-sub">Sarah calls each pending contact and writes results back to the sheet</div></div></div>
+          <div class="form-row">
+            <label class="field"><span class="field-label">Calls at once</span>
+              <input type="number" id="c-concurrent" value="1" min="1" max="10">
+              <span class="field-help">1–10 simultaneous calls</span></label>
+            <label class="field"><span class="field-label">Seconds between calls</span>
+              <input type="number" id="c-delay" value="5" min="0" step="0.5"></label>
+            <label class="field"><span class="field-label">Max calls</span>
+              <input type="number" id="c-max" value="0" min="0">
+              <span class="field-help">0 = everyone pending</span></label>
+          </div>
+          <div class="banner hidden" id="campaign-warn" style="margin:0 0 14px">
+            <div class="grow small">Setup isn't finished — calls will fail until every required service is connected.</div>
+            <button type="button" class="btn btn-sm" data-goto="setup">Open setup</button>
+          </div>
+          <button class="btn btn-primary" type="submit"><span data-icon="rocket"></span>Start campaign</button>
+        </form>
+        <div class="card">
+          <div class="card-head"><div><h3>How it works</h3></div></div>
+          <ol style="margin:0;padding-left:18px;color:var(--text-2);line-height:1.9">
+            <li>Reads rows with a blank or <em>pending</em> Status from your sheet</li>
+            <li>Calls each trucker — Sarah pitches, handles objections, asks for an email</li>
+            <li>After each call, AI scores the lead and writes the result to the sheet</li>
+            <li>Watch progress live on the Overview and Calls pages</li>
+          </ol>
         </div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Campaign ID</th>
-                        <th>Status</th>
-                        <th>Contacts</th>
-                        <th>Calls Made</th>
-                        <th>Answered</th>
-                        <th>Qualified</th>
-                        <th>Active</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="campaigns-body">
-                    <tr><td colspan="8" class="empty-state">No campaigns yet — start one from the Dashboard</td></tr>
-                </tbody>
-            </table>
-        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3>Running campaigns</h3><div class="card-sub">Finished campaigns appear in Calls history</div></div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Campaign</th><th>Status</th><th>Progress</th><th>Answered</th><th>Qualified</th><th>Live</th><th></th></tr></thead>
+          <tbody id="campaigns-body"></tbody>
+        </table></div>
+      </div>
     </section>
 
-    <!-- PAGE: Campaign Detail -->
-    <section id="page-campaign-detail">
-        <a class="back-link" onclick="switchPage('campaigns')">&#8592; Back to Campaigns</a>
-        <div class="section-header">
-            <h2>Campaign: <span id="detail-id">—</span></h2>
-            <span class="badge" id="detail-status-badge">—</span>
+    <!-- ------------------------------------------------ SETUP -->
+    <section class="view" id="view-setup">
+      <div class="page-head">
+        <div><h1>Setup</h1><p>Connect each service once — keys are saved to your server's .env file</p></div>
+        <div style="min-width:220px">
+          <div class="small muted" style="margin-bottom:6px"><strong id="setup-count" class="num">0 of 7</strong> connected</div>
+          <div class="progress"><div id="setup-bar" style="width:0"></div></div>
         </div>
-        <div class="stat-grid">
-            <div class="stat-card blue">
-                <div class="label">Calls Made</div>
-                <div class="value" id="detail-calls-made">0</div>
-            </div>
-            <div class="stat-card green">
-                <div class="label">Answered</div>
-                <div class="value" id="detail-answered">0</div>
-            </div>
-            <div class="stat-card gold">
-                <div class="label">Qualified</div>
-                <div class="value" id="detail-qualified">0</div>
-            </div>
-            <div class="stat-card red">
-                <div class="label">Failed</div>
-                <div class="value" id="detail-failed">0</div>
-            </div>
-        </div>
-        <div class="detail-meta">
-            <strong>Total Contacts:</strong> <span id="detail-total-contacts">—</span><br>
-            <strong>Active Calls:</strong> <span id="detail-active-calls">—</span><br>
-            <strong>Started:</strong> <span id="detail-started">—</span><br>
-            <strong>Finished:</strong> <span id="detail-finished">—</span>
-        </div>
-        <div class="btn-group" id="detail-actions"></div>
-        <ul class="error-list" id="detail-errors"></ul>
+      </div>
+      <div class="steps" id="setup-steps"></div>
     </section>
 
-    <!-- PAGE: Test Call -->
-    <section id="page-test-call">
-        <div class="section-header">
-            <h2>Make a Test Call</h2>
+    <!-- ------------------------------------------------ TEST CALL -->
+    <section class="view" id="view-test">
+      <div class="page-head"><div><h1>Test call</h1><p>Call your own phone to hear Sarah before calling truckers</p></div></div>
+      <form class="card" id="form-test" style="max-width:520px">
+        <label class="field"><span class="field-label">Phone number</span>
+          <input type="tel" id="t-phone" placeholder="+15551234567" required>
+          <span class="field-help">Include the country code, e.g. +1 for the US</span></label>
+        <div class="form-row">
+          <label class="field"><span class="field-label">Name Sarah should use</span><input type="text" id="t-name" placeholder="Mike"></label>
+          <label class="field"><span class="field-label">Company</span><input type="text" id="t-company" placeholder="Mike's Trucking"></label>
         </div>
-        <div class="form-card">
-            <form id="form-test-call">
-                <div class="form-group">
-                    <label>Phone Number</label>
-                    <input type="tel" id="inp-phone" placeholder="+12025551234" required>
-                    <div class="form-hint">E.164 format: +1 followed by 10 digits</div>
-                </div>
-                <div class="form-group">
-                    <label>Contact Name</label>
-                    <input type="text" id="inp-name" placeholder="John Smith">
-                </div>
-                <div class="form-group">
-                    <label>Company</label>
-                    <input type="text" id="inp-company" placeholder="ABC Trucking">
-                </div>
-                <button type="submit" class="btn btn-primary">Call Now</button>
-            </form>
-            <div class="form-result" id="result-test-call"></div>
-        </div>
+        <button class="btn btn-primary" type="submit"><span data-icon="phone"></span>Call me</button>
+      </form>
     </section>
 
-    <!-- PAGE: Send Email -->
-    <section id="page-send-email">
-        <div class="section-header">
-            <h2>Send Follow-Up Email</h2>
-        </div>
-        <div class="form-card">
-            <form id="form-send-email">
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="inp-email" placeholder="trucker@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label>Contact Name</label>
-                    <input type="text" id="inp-email-name" placeholder="John Smith">
-                </div>
-                <button type="submit" class="btn btn-primary">Send Email</button>
-            </form>
-            <div class="form-result" id="result-send-email"></div>
-        </div>
+    <!-- ------------------------------------------------ ACCOUNT -->
+    <section class="view" id="view-account">
+      <div class="page-head"><div><h1>Account</h1><p>Dashboard password and session</p></div></div>
+      <form class="card" id="form-password" style="max-width:520px;margin-bottom:16px">
+        <div class="card-head"><div><h3>Change password</h3><div class="card-sub">Logs out every other browser</div></div></div>
+        <label class="field"><span class="field-label">Current password</span><input type="password" id="p-current" autocomplete="current-password" required></label>
+        <label class="field"><span class="field-label">New password</span><input type="password" id="p-new" autocomplete="new-password" minlength="8" required></label>
+        <button class="btn btn-primary" type="submit">Update password</button>
+      </form>
+      <div class="card" style="max-width:520px">
+        <div class="card-head"><div><h3>Log out</h3><div class="card-sub">End this browser's session</div></div>
+          <button class="btn btn-danger" id="logout-btn">Log out</button></div>
+      </div>
     </section>
+  </main>
+</div>
 
-</main>
-
-<!-- Toast Container -->
-<div class="toast-container" id="toastContainer"></div>
+<div class="toasts" id="toasts"></div>
 
 <script>
-    // ===========================
-    // API Helper
-    // ===========================
-    async function api(method, path, body = null) {
-        const opts = {
-            method,
-            headers: { "Content-Type": "application/json" },
-        };
-        if (body) opts.body = JSON.stringify(body);
-        const res = await fetch(path, opts);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-        return data;
-    }
+"use strict";
 
-    // ===========================
-    // Toast Notifications
-    // ===========================
-    function showToast(message, type = "info") {
-        const container = document.getElementById("toastContainer");
-        const toast = document.createElement("div");
-        toast.className = `toast toast-${type}`;
-        toast.textContent = message;
-        container.appendChild(toast);
-        setTimeout(() => {
-            toast.style.opacity = "0";
-            toast.style.transition = "opacity 0.3s";
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
-    }
+/* ================================================================== utils */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-    // ===========================
-    // Navigation
-    // ===========================
-    let refreshInterval = null;
-    let currentCampaignId = null;
+/** Build a DOM element. Children that are strings become text nodes (never HTML). */
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "style") el.style.cssText = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) {
+    if (c === null || c === undefined || c === false) continue;
+    el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return el;
+}
+const SVGNS = "http://www.w3.org/2000/svg";
+function s(tag, attrs) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  return el;
+}
+function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
 
-    function switchPage(pageId) {
-        // Clear any auto-refresh
-        if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
+const nf = new Intl.NumberFormat();
+const fmtNum = (n) => nf.format(n || 0);
+const fmtPct = (r) => `${Math.round((r || 0) * 100)}%`;
+const fmtMoney = (n) => `$${(n || 0).toFixed(2)}`;
+function fmtDuration(sec) {
+  sec = Math.round(sec || 0);
+  if (!sec) return "—";
+  const m = Math.floor(sec / 60), r = sec % 60;
+  return m ? `${m}m ${String(r).padStart(2, "0")}s` : `${r}s`;
+}
+function timeAgo(ts) {
+  if (!ts) return "—";
+  const diff = Date.now() / 1000 - ts;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`;
+  return new Date(ts * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+const fmtDay = (iso) => new Date(iso + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
-        // Update sections
-        document.querySelectorAll("main > section").forEach(s => s.classList.remove("active"));
-        const target = document.getElementById("page-" + pageId);
-        if (target) target.classList.add("active");
+function store(key, value) {
+  try {
+    if (value === undefined) return localStorage.getItem(key);
+    localStorage.setItem(key, value);
+  } catch (_) { return null; }
+}
 
-        // Update nav tabs
-        document.querySelectorAll("nav button").forEach(b => {
-            b.classList.toggle("active", b.dataset.page === pageId);
-        });
+function toast(message, type = "info") {
+  const el = h("div", { class: `toast ${type}`, role: "status" }, message);
+  $("#toasts").append(el);
+  setTimeout(() => el.remove(), 4200);
+}
 
-        // Load data & start auto-refresh for relevant pages
-        if (pageId === "dashboard") {
-            refreshDashboard();
-            refreshInterval = setInterval(refreshDashboard, 5000);
-        } else if (pageId === "campaigns") {
-            loadCampaigns();
-            refreshInterval = setInterval(loadCampaigns, 5000);
-        } else if (pageId === "campaign-detail" && currentCampaignId) {
-            viewCampaign(currentCampaignId);
-            refreshInterval = setInterval(() => viewCampaign(currentCampaignId), 5000);
-        }
-    }
+/* ================================================================== icons */
+const ICONS = {
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  rocket: '<path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 00-2.9-.1z"/><path d="M12 15l-3-3a22 22 0 012-3.9A12.9 12.9 0 0122 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 01-4 2z"/><path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z"/>',
+  phone: '<path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/>',
+  user: '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  headset: '<path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/>',
+  star: '<path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/>',
+  dollar: '<path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>',
+  chevron: '<path d="M6 9l6 6 6-6"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>',
+  external: '<path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>',
+  x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  upload: '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+};
+function icon(name, size = 18) {
+  if (name === "phone-white") {
+    const svg = s("svg", { viewBox: "0 0 24 24", width: 18, height: 18, fill: "#fff" });
+    svg.append(s("path", { d: "M8.6 5.5l1.6 3.4-1.4 1.1a8.6 8.6 0 004.2 4.2l1.1-1.4 3.4 1.6-.6 2.9a1.2 1.2 0 01-1.3.9A11.8 11.8 0 015.8 7.4a1.2 1.2 0 01.9-1.3z" }));
+    return svg;
+  }
+  const svg = s("svg", { viewBox: "0 0 24 24", width: size, height: size, fill: "none", stroke: "currentColor",
+    "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" });
+  // Icon markup is a static constant defined above — never user data.
+  svg.innerHTML = ICONS[name] || "";
+  return svg;
+}
+function hydrateIcons(root = document) {
+  $$("[data-icon]", root).forEach((el) => { clear(el).append(icon(el.dataset.icon)); });
+}
 
-    // ===========================
-    // Health Check
-    // ===========================
-    async function checkHealth() {
-        try {
-            await api("GET", "/health");
-            document.getElementById("healthDot").classList.add("ok");
-            document.getElementById("healthText").textContent = "Healthy";
-        } catch {
-            document.getElementById("healthDot").classList.remove("ok");
-            document.getElementById("healthText").textContent = "Offline";
-        }
-    }
+/* ================================================================== api */
+class AuthError extends Error {}
+async function api(method, path, body) {
+  const opts = { method, headers: {}, credentials: "same-origin" };
+  if (body !== undefined) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(path, opts);
+  let data = null;
+  try { data = await res.json(); } catch (_) { /* empty body */ }
+  if (res.status === 401 && !path.startsWith("/api/auth/")) {
+    showAuth();
+    throw new AuthError("Not logged in");
+  }
+  if (!res.ok) {
+    const detail = data && data.detail;
+    const msg = typeof detail === "string" ? detail
+      : Array.isArray(detail) ? detail.map((d) => d.msg).join(", ") : `Request failed (${res.status})`;
+    throw new Error(msg);
+  }
+  return data;
+}
+function reportError(err) {
+  if (!(err instanceof AuthError)) toast(err.message || String(err), "error");
+}
 
-    // ===========================
-    // Dashboard
-    // ===========================
-    async function refreshDashboard() {
-        try {
-            const [stats, campData] = await Promise.all([
-                api("GET", "/api/stats"),
-                api("GET", "/api/campaigns"),
-            ]);
+/* ================================================================== labels */
+const OUTCOME = {
+  qualified: ["Qualified", "good"], follow_up: ["Follow-up", "info"], not_interested: ["Not interested", ""],
+  voicemail: ["Voicemail", ""], no_answer: ["No answer", "warn"], "no-answer": ["No answer", "warn"],
+  busy: ["Busy", "warn"], failed: ["Failed", "crit"], canceled: ["Canceled", ""], pending: ["No result yet", ""],
+};
+const STATUS = {
+  queued: ["Queued", "info"], initiated: ["Dialing", "info"], ringing: ["Ringing", "info"],
+  "in-progress": ["Live", "warn"], completed: ["Completed", "good"], busy: ["Busy", "crit"],
+  "no-answer": ["No answer", "crit"], failed: ["Failed", "crit"], canceled: ["Canceled", ""],
+  running: ["Running", "good"], paused: ["Paused", "warn"], stopping: ["Stopping", "warn"], error: ["Error", "crit"],
+};
+function pill(map, key) {
+  if (!key) return h("span", { class: "muted" }, "—");
+  const [label, tone] = map[key] || [key.replace(/_/g, " "), ""];
+  return h("span", { class: `pill ${tone}` }, label);
+}
 
-            document.getElementById("stat-total-calls").textContent = stats.total_calls;
-            document.getElementById("stat-answered").textContent = stats.total_answered;
-            document.getElementById("stat-qualified").textContent = stats.total_qualified;
-            document.getElementById("stat-failed").textContent = stats.total_failed;
-            document.getElementById("stat-active").textContent = stats.active_campaigns;
-            document.getElementById("stat-total-campaigns").textContent = stats.total_campaigns;
+/* ================================================================== auth */
+async function boot() {
+  hydrateIcons();
+  applyTheme(store("va-theme"));
+  let status;
+  try { status = await api("GET", "/api/auth/status"); }
+  catch (err) { toast("Can't reach the server", "error"); return; }
+  if (status.authenticated && status.password_set) return showApp();
+  showAuth(status);
+}
 
-            renderDashboardCampaigns(campData.campaigns);
-        } catch (e) {
-            console.error("Dashboard refresh failed:", e);
-        }
-    }
+function showAuth(status) {
+  stopPolling();
+  $("#app").classList.add("hidden");
+  $("#auth").classList.remove("hidden");
+  const show = (id) => ["#form-login", "#form-create", "#auth-remote"].forEach((f) => $(f).classList.toggle("hidden", f !== id));
+  if (!status) { show("#form-login"); return; }
+  if (status.password_set) show("#form-login");
+  else if (status.can_create_password) show("#form-create");
+  else show("#auth-remote");
+  const first = $("#auth form:not(.hidden) input");
+  if (first) first.focus();
+}
 
-    function renderDashboardCampaigns(campaigns) {
-        const tbody = document.getElementById("dashboard-campaigns-body");
-        if (!campaigns || campaigns.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No active campaigns</td></tr>';
-            return;
-        }
-        tbody.innerHTML = campaigns.map(c => `
-            <tr style="cursor:pointer" onclick="currentCampaignId='${c.campaign_id}'; switchPage('campaign-detail')">
-                <td><strong>${c.campaign_id}</strong></td>
-                <td>${badge(c.status)}</td>
-                <td>${c.calls_made}</td>
-                <td>${c.calls_answered}</td>
-                <td>${c.qualified_leads}</td>
-                <td>${campaignActions(c.campaign_id, c.status)}</td>
-            </tr>
-        `).join("");
-    }
+$("#form-login").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("#login-error").textContent = "";
+  try {
+    await api("POST", "/api/auth/login", { password: $("#login-password").value });
+    $("#login-password").value = "";
+    showApp();
+  } catch (err) { $("#login-error").textContent = err.message; }
+});
 
-    // ===========================
-    // Campaigns List
-    // ===========================
-    async function loadCampaigns() {
-        try {
-            const data = await api("GET", "/api/campaigns");
-            const tbody = document.getElementById("campaigns-body");
-            if (!data.campaigns || data.campaigns.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No campaigns yet — start one from the Dashboard</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.campaigns.map(c => `
-                <tr>
-                    <td><a style="color:#3182ce;cursor:pointer;font-weight:600" onclick="currentCampaignId='${c.campaign_id}'; switchPage('campaign-detail')">${c.campaign_id}</a></td>
-                    <td>${badge(c.status)}</td>
-                    <td>${c.total_contacts}</td>
-                    <td>${c.calls_made}</td>
-                    <td>${c.calls_answered}</td>
-                    <td>${c.qualified_leads}</td>
-                    <td>${c.active_calls}</td>
-                    <td>${campaignActions(c.campaign_id, c.status)}</td>
-                </tr>
-            `).join("");
-        } catch (e) {
-            console.error("Load campaigns failed:", e);
-        }
-    }
+$("#form-create").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pw = $("#create-password").value, confirm = $("#create-confirm").value;
+  if (pw !== confirm) { $("#create-error").textContent = "Passwords don't match"; return; }
+  try {
+    await api("POST", "/api/auth/setup", { password: pw });
+    toast("Password created", "success");
+    showApp("setup");
+  } catch (err) { $("#create-error").textContent = err.message; }
+});
 
-    // ===========================
-    // Campaign Detail
-    // ===========================
-    async function viewCampaign(campaignId) {
-        try {
-            const c = await api("GET", `/api/campaigns/${campaignId}`);
+$("#form-password").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await api("POST", "/api/auth/password", { current_password: $("#p-current").value, new_password: $("#p-new").value });
+    e.target.reset();
+    toast("Password updated", "success");
+  } catch (err) { reportError(err); }
+});
 
-            document.getElementById("detail-id").textContent = c.campaign_id;
-            const badgeEl = document.getElementById("detail-status-badge");
-            badgeEl.className = "badge badge-" + c.status;
-            badgeEl.textContent = c.status;
+$("#logout-btn").addEventListener("click", async () => {
+  await api("POST", "/api/auth/logout").catch(() => {});
+  showAuth({ password_set: true });
+});
 
-            document.getElementById("detail-calls-made").textContent = c.calls_made;
-            document.getElementById("detail-answered").textContent = c.calls_answered;
-            document.getElementById("detail-qualified").textContent = c.qualified_leads;
-            document.getElementById("detail-failed").textContent = c.calls_failed;
+/* ================================================================== theme */
+function applyTheme(theme) {
+  if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+  const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const slot = $("#theme-toggle [data-icon]");
+  slot.dataset.icon = dark ? "sun" : "moon";
+  clear(slot).append(icon(slot.dataset.icon));
+}
+$("#theme-toggle").addEventListener("click", () => {
+  const current = document.documentElement.dataset.theme
+    || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const next = current === "dark" ? "light" : "dark";
+  store("va-theme", next);
+  applyTheme(next);
+  if (state.overview) renderDaily(state.overview.daily);
+});
 
-            document.getElementById("detail-total-contacts").textContent = c.total_contacts;
-            document.getElementById("detail-active-calls").textContent = c.active_calls;
-            document.getElementById("detail-started").textContent = c.started_at ? new Date(c.started_at * 1000).toLocaleString() : "—";
-            document.getElementById("detail-finished").textContent = c.finished_at ? new Date(c.finished_at * 1000).toLocaleString() : "—";
+/* ================================================================== routing */
+const state = { view: "overview", days: 14, dailyMode: "chart", overview: null, setup: null,
+  calls: { offset: 0, limit: 25, total: 0 }, timer: null };
 
-            // Action buttons
-            const actionsEl = document.getElementById("detail-actions");
-            actionsEl.innerHTML = campaignActions(campaignId, c.status);
+function showApp(view) {
+  $("#auth").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  checkHealth();
+  loadSetup().catch(reportError);
+  go(view || (location.hash.slice(1) || "overview"));
+  startPolling();
+}
 
-            // Errors
-            const errorsEl = document.getElementById("detail-errors");
-            if (c.errors && c.errors.length > 0) {
-                errorsEl.innerHTML = "<h4 style='margin-bottom:8px;color:#742a2a'>Errors:</h4>" +
-                    c.errors.map(e => `<li>${e}</li>`).join("");
-            } else {
-                errorsEl.innerHTML = "";
-            }
-        } catch (e) {
-            showToast("Campaign not found or has been removed", "error");
-            switchPage("campaigns");
-        }
-    }
+const LOADERS = {
+  overview: () => loadOverview(),
+  calls: () => loadCalls(),
+  campaigns: () => loadCampaigns(),
+  setup: () => loadSetup(),
+  test: () => Promise.resolve(),
+  account: () => Promise.resolve(),
+};
+function go(view) {
+  if (!LOADERS[view]) view = "overview";
+  state.view = view;
+  $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+  $$(".nav-btn[data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  if (location.hash.slice(1) !== view) history.replaceState(null, "", `#${view}`);
+  LOADERS[view]().catch(reportError);
+}
+document.addEventListener("click", (e) => {
+  const nav = e.target.closest("[data-view]");
+  if (nav && nav.classList.contains("nav-btn")) return go(nav.dataset.view);
+  const link = e.target.closest("[data-goto]");
+  if (link) { e.preventDefault(); go(link.dataset.goto); }
+});
+window.addEventListener("hashchange", () => go(location.hash.slice(1)));
 
-    // ===========================
-    // Campaign Actions
-    // ===========================
-    async function pauseCampaign(id, event) {
-        if (event) event.stopPropagation();
-        try {
-            await api("POST", `/api/campaigns/${id}/pause`);
-            showToast("Campaign paused", "info");
-            refreshCurrentPage();
-        } catch (e) { showToast(e.message, "error"); }
-    }
+function startPolling() {
+  stopPolling();
+  state.timer = setInterval(() => {
+    if (document.hidden) return;
+    if (state.view === "overview") loadOverview(true).catch(() => {});
+    if (state.view === "campaigns") loadCampaigns().catch(() => {});
+    if (state.view === "calls") loadCalls().catch(() => {});
+  }, 10000);
+}
+function stopPolling() { if (state.timer) clearInterval(state.timer); state.timer = null; }
 
-    async function resumeCampaign(id, event) {
-        if (event) event.stopPropagation();
-        try {
-            await api("POST", `/api/campaigns/${id}/resume`);
-            showToast("Campaign resumed", "success");
-            refreshCurrentPage();
-        } catch (e) { showToast(e.message, "error"); }
-    }
+async function checkHealth() {
+  try {
+    const res = await fetch("/health");
+    const ok = res.ok;
+    $("#health-dot").className = `dot ${ok ? "ok" : "bad"}`;
+    $("#health-text").textContent = ok ? "Server online" : "Server error";
+  } catch (_) {
+    $("#health-dot").className = "dot bad";
+    $("#health-text").textContent = "Offline";
+  }
+}
 
-    async function stopCampaign(id, event) {
-        if (event) event.stopPropagation();
-        if (!confirm("Are you sure you want to stop this campaign?")) return;
-        try {
-            await api("POST", `/api/campaigns/${id}/stop`);
-            showToast("Campaign stopping...", "info");
-            refreshCurrentPage();
-        } catch (e) { showToast(e.message, "error"); }
-    }
+/* ================================================================== overview */
+async function loadOverview(quiet) {
+  const chart = $("#daily-chart");
+  if (state.overview) chart.classList.add("loading");   // keep the frame while refetching
+  try {
+    const o = await api("GET", `/api/dashboard/overview?days=${state.days}`);
+    state.overview = o;
+    renderOverview(o);
+    $("#updated-at").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  } finally {
+    chart.classList.remove("loading");
+  }
+}
 
-    function refreshCurrentPage() {
-        const activePage = document.querySelector("main > section.active");
-        if (!activePage) return;
-        if (activePage.id === "page-dashboard") refreshDashboard();
-        else if (activePage.id === "page-campaigns") loadCampaigns();
-        else if (activePage.id === "page-campaign-detail" && currentCampaignId) viewCampaign(currentCampaignId);
-    }
+function renderOverview(o) {
+  $("#k-total").textContent = fmtNum(o.calls.total);
+  $("#k-today").textContent = fmtNum(o.calls.today);
+  $("#k-active").textContent = fmtNum(o.calls.active);
+  $("#k-answered").textContent = fmtNum(o.calls.answered);
+  $("#k-answer-rate").textContent = fmtPct(o.rates.answer_rate);
+  $("#k-qualified").textContent = fmtNum(o.leads.qualified);
+  $("#k-qualify-rate").textContent = fmtPct(o.rates.qualify_rate);
+  $("#k-followup").textContent = fmtNum(o.leads.follow_up);
+  $("#k-emails").textContent = fmtNum(o.leads.emails_collected);
+  $("#k-failed").textContent = fmtNum(o.calls.failed);
+  $("#k-saved").textContent = fmtMoney(o.cost.saved);
+  $("#k-minutes").textContent = fmtNum(o.cost.talk_minutes);
+  $("#k-avg").textContent = fmtDuration(o.cost.avg_call_seconds);
+  renderDaily(o.daily);
+  renderOutcomes(o.outcomes);
+  renderCost(o.cost);
+  loadRecent().catch(() => {});
+}
 
-    // ===========================
-    // Helpers
-    // ===========================
-    function badge(status) {
-        return `<span class="badge badge-${status}">${status}</span>`;
-    }
+/* ---- calls per day: grouped bars, hover tooltip, table view ---- */
+const SERIES = [
+  { key: "calls", label: "Calls", color: "var(--s1)" },
+  { key: "answered", label: "Answered", color: "var(--s2)" },
+  { key: "qualified", label: "Qualified", color: "var(--s3)" },
+];
+function niceMax(v) {
+  if (v <= 4) return 4;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
+  return 10 * p;
+}
+function barPath(x, y, w, hgt, r) {
+  if (hgt <= 0) return "";
+  r = Math.min(r, w / 2, hgt);
+  return `M${x},${y + hgt}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + hgt}Z`;
+}
 
-    function campaignActions(id, status) {
-        let html = "";
-        if (status === "running") {
-            html += `<button class="btn btn-warning btn-sm" onclick="pauseCampaign('${id}', event)">Pause</button> `;
-            html += `<button class="btn btn-danger btn-sm" onclick="stopCampaign('${id}', event)">Stop</button>`;
-        } else if (status === "paused") {
-            html += `<button class="btn btn-success btn-sm" onclick="resumeCampaign('${id}', event)">Resume</button> `;
-            html += `<button class="btn btn-danger btn-sm" onclick="stopCampaign('${id}', event)">Stop</button>`;
-        } else {
-            html += `<button class="btn btn-outline btn-sm" onclick="currentCampaignId='${id}'; switchPage('campaign-detail')">View</button>`;
-        }
-        return html;
-    }
+function renderDaily(daily) {
+  renderDailyTable(daily);
+  const box = clear($("#daily-chart"));
+  // Fill the card: the box stretches to match the neighbouring column.
+  const W = Math.max(box.clientWidth || 600, 280), H = Math.max(240, box.clientHeight || 240);
+  const m = { top: 8, right: 4, bottom: 26, left: 34 };
+  const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+  const max = niceMax(Math.max(1, ...daily.map((d) => d.calls)));
+  const y = (v) => m.top + ih - (v / max) * ih;
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img",
+    "aria-label": "Calls, answered and qualified per day" });
 
-    // ===========================
-    // Form: Start Campaign
-    // ===========================
-    document.getElementById("form-start-campaign").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector("button[type=submit]");
-        const resultEl = document.getElementById("result-start-campaign");
-        btn.disabled = true;
-        resultEl.className = "form-result";
-        resultEl.style.display = "none";
+  const axis = s("g", { class: "axis" });
+  for (let i = 0; i <= 4; i++) {
+    const v = (max / 4) * i, yy = y(v);
+    axis.append(s("line", { x1: m.left, x2: W - m.right, y1: yy, y2: yy, class: i ? "gridline" : "baseline" }));
+    const t = s("text", { x: m.left - 8, y: yy + 4, "text-anchor": "end" });
+    t.textContent = Number.isInteger(v) ? v : v.toFixed(1);
+    axis.append(t);
+  }
+  svg.append(axis);
 
-        try {
-            const data = await api("POST", "/api/campaigns", {
-                max_concurrent_calls: parseInt(document.getElementById("inp-concurrent").value) || 1,
-                delay_between_calls: parseFloat(document.getElementById("inp-delay").value) || 5.0,
-                max_calls: parseInt(document.getElementById("inp-max-calls").value) || 0,
-            });
-            resultEl.className = "form-result success";
-            resultEl.textContent = `Campaign started! ID: ${data.campaign_id}`;
-            resultEl.style.display = "block";
-            showToast(`Campaign ${data.campaign_id} started!`, "success");
-        } catch (err) {
-            resultEl.className = "form-result error";
-            resultEl.textContent = `Error: ${err.message}`;
-            resultEl.style.display = "block";
-            showToast(err.message, "error");
-        }
-        btn.disabled = false;
+  const band = iw / daily.length;
+  const gap = 2;
+  const barW = Math.max(2, Math.min(12, (band * 0.72 - gap * 2) / 3));
+  const groupW = barW * 3 + gap * 2;
+  const labelEvery = Math.ceil(daily.length / Math.max(2, Math.floor(iw / 64)));
+  const tip = h("div", { class: "tooltip hidden" });
+
+  daily.forEach((d, i) => {
+    const gx = m.left + band * i + (band - groupW) / 2;
+    const hit = s("rect", { class: "hit", x: m.left + band * i, y: m.top, width: band, height: ih, rx: 6, tabindex: 0,
+      "aria-label": `${fmtDay(d.date)}: ${d.calls} calls, ${d.answered} answered, ${d.qualified} qualified` });
+    svg.append(hit);
+    SERIES.forEach((ser, j) => {
+      const v = d[ser.key];
+      const p = barPath(gx + j * (barW + gap), y(v), barW, y(0) - y(v), 4);
+      if (p) svg.append(s("path", { d: p, fill: ser.color, "pointer-events": "none" }));
     });
+    if ((daily.length - 1 - i) % labelEvery === 0) {   // anchor on today, even spacing
+      const t = s("text", { x: m.left + band * i + band / 2, y: H - 6, "text-anchor": "middle", class: "axis" });
+      t.textContent = fmtDay(d.date);
+      t.style.fill = "var(--muted)"; t.style.fontSize = "11px";
+      svg.append(t);
+    }
+    const show = () => {
+      clear(tip).append(
+        h("div", { class: "tt-title" }, new Date(d.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })),
+        ...SERIES.map((ser) => h("div", { class: "tt-row" },
+          h("i", { style: `background:${ser.color}` }), h("strong", { class: "num" }, fmtNum(d[ser.key])), h("span", {}, ser.label))),
+      );
+      tip.classList.remove("hidden");
+      const left = ((m.left + band * i + band / 2) / W) * box.clientWidth;
+      const tw = tip.offsetWidth || 150;
+      tip.style.left = `${Math.min(Math.max(0, left - tw / 2), box.clientWidth - tw)}px`;
+      tip.style.top = "-6px";
+    };
+    hit.addEventListener("pointerenter", show);
+    hit.addEventListener("focus", show);
+    hit.addEventListener("pointerleave", () => tip.classList.add("hidden"));
+    hit.addEventListener("blur", () => tip.classList.add("hidden"));
+  });
+  box.append(svg, tip);
+}
 
-    // ===========================
-    // Form: Test Call
-    // ===========================
-    document.getElementById("form-test-call").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector("button[type=submit]");
-        const resultEl = document.getElementById("result-test-call");
-        btn.disabled = true;
-        resultEl.className = "form-result";
-        resultEl.style.display = "none";
+function renderDailyTable(daily) {
+  const rows = [...daily].reverse().map((d) => h("tr", {},
+    h("td", {}, fmtDay(d.date)), ...SERIES.map((ser) => h("td", { class: "num" }, fmtNum(d[ser.key])))));
+  clear($("#daily-table")).append(h("table", {},
+    h("thead", {}, h("tr", {}, h("th", {}, "Day"), ...SERIES.map((ser) => h("th", {}, ser.label)))),
+    h("tbody", {}, rows)));
+}
 
-        try {
-            const data = await api("POST", "/api/calls/single", {
-                phone_number: document.getElementById("inp-phone").value.trim(),
-                contact_name: document.getElementById("inp-name").value.trim(),
-                company: document.getElementById("inp-company").value.trim(),
-            });
-            resultEl.className = "form-result success";
-            resultEl.textContent = `Call initiated! SID: ${data.call_sid}`;
-            resultEl.style.display = "block";
-            showToast("Call initiated!", "success");
-        } catch (err) {
-            resultEl.className = "form-result error";
-            resultEl.textContent = `Error: ${err.message}`;
-            resultEl.style.display = "block";
-            showToast(err.message, "error");
-        }
-        btn.disabled = false;
+$("#range-seg").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  $$("#range-seg button").forEach((x) => x.classList.toggle("on", x === b));
+  state.days = Number(b.dataset.days);
+  loadOverview().catch(reportError);
+});
+$("#daily-mode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  $$("#daily-mode button").forEach((x) => x.classList.toggle("on", x === b));
+  const table = b.dataset.mode === "table";
+  $("#daily-chart").classList.toggle("hidden", table);
+  $("#daily-table").classList.toggle("hidden", !table);
+});
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => state.overview && renderDaily(state.overview.daily), 150);
+});
+
+function hbar(label, valueText, ratio, alt) {
+  return h("div", {},
+    h("div", { class: "hbar-top" }, h("span", {}, label), h("strong", { class: "num" }, valueText)),
+    h("div", { class: "hbar-track" },
+      h("div", { class: `hbar-fill${alt ? " alt" : ""}`, style: `width:${Math.max(0, Math.min(1, ratio)) * 100}%` })));
+}
+
+function renderOutcomes(outcomes) {
+  const box = clear($("#outcomes"));
+  const entries = Object.entries(outcomes || {}).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    box.append(h("div", { class: "muted small" }, "No calls yet — outcomes appear here after the first call."));
+    return;
+  }
+  const max = entries[0][1];
+  const shown = entries.slice(0, 5);
+  const rest = entries.slice(5).reduce((n, e) => n + e[1], 0);
+  if (rest) shown.push(["other", rest]);
+  shown.forEach(([key, n]) => box.append(hbar((OUTCOME[key] || [key === "other" ? "Other" : key])[0], fmtNum(n), n / max)));
+}
+
+function renderCost(c) {
+  const box = clear($("#cost-bars"));
+  const pct = Math.round((1 - c.cost_per_minute / c.industry_cost_per_minute) * 100);
+  box.append(
+    hbar("This agent", `${fmtMoney(c.cost_per_minute)}/min`, c.cost_per_minute / c.industry_cost_per_minute),
+    hbar("Typical voice-AI platform", `${fmtMoney(c.industry_cost_per_minute)}/min`, 1, true),
+  );
+  $("#cost-sub").textContent = c.talk_minutes
+    ? `${pct}% cheaper · est. ${fmtMoney(c.estimated_cost)} spent vs ${fmtMoney(c.industry_cost)} elsewhere`
+    : `${pct}% cheaper per minute (estimate)`;
+}
+
+function callRow(c, compact) {
+  const who = h("div", { class: "who" }, h("strong", {}, c.contact_name || "Unknown"), h("span", {}, c.company || c.phone || ""));
+  const cells = compact
+    ? [who, pill(STATUS, c.status), pill(OUTCOME, c.outcome), h("span", { class: "num" }, fmtDuration(c.duration)), timeAgo(c.created_at)]
+    : [who, h("span", { class: "num" }, c.phone || "—"), pill(STATUS, c.status), pill(OUTCOME, c.outcome),
+       c.email || h("span", { class: "muted" }, "—"), h("span", { class: "num" }, fmtDuration(c.duration)), timeAgo(c.created_at)];
+  const tr = h("tr", { class: "clickable", tabindex: 0 }, cells.map((x) => h("td", {}, x)));
+  const open = () => openCall(c.call_sid);
+  tr.addEventListener("click", open);
+  tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
+  return tr;
+}
+
+async function loadRecent() {
+  const { calls } = await api("GET", "/api/calls?limit=6");
+  const body = clear($("#recent-body"));
+  if (!calls.length) {
+    body.append(h("tr", {}, h("td", { colspan: 5, class: "empty" },
+      "No calls yet. ", h("a", { href: "#test", "data-goto": "test" }, "Make a test call"), " to hear your agent.")));
+    return;
+  }
+  calls.forEach((c) => body.append(callRow(c, true)));
+}
+
+/* ================================================================== calls */
+let searchTimer;
+async function loadCalls() {
+  const q = new URLSearchParams({ limit: state.calls.limit, offset: state.calls.offset });
+  const search = $("#calls-search").value.trim();
+  if (search) q.set("search", search);
+  if ($("#calls-outcome").value) q.set("outcome", $("#calls-outcome").value);
+  if ($("#calls-status").value) q.set("status", $("#calls-status").value);
+  const data = await api("GET", "/api/calls?" + q.toString());
+  state.calls.total = data.total;
+  const body = clear($("#calls-body"));
+  if (!data.calls.length) {
+    body.append(h("tr", {}, h("td", { colspan: 7, class: "empty" }, data.total || search ? "No calls match these filters." : "No calls yet.")));
+  }
+  data.calls.forEach((c) => body.append(callRow(c, false)));
+  const from = data.total ? state.calls.offset + 1 : 0;
+  $("#calls-range").textContent = `${fmtNum(from)}–${fmtNum(state.calls.offset + data.calls.length)} of ${fmtNum(data.total)}`;
+  $("#calls-prev").disabled = state.calls.offset === 0;
+  $("#calls-next").disabled = state.calls.offset + state.calls.limit >= data.total;
+}
+function resetAndLoadCalls() { state.calls.offset = 0; loadCalls().catch(reportError); }
+$("#calls-search").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(resetAndLoadCalls, 250); });
+$("#calls-outcome").addEventListener("change", resetAndLoadCalls);
+$("#calls-status").addEventListener("change", resetAndLoadCalls);
+$("#calls-prev").addEventListener("click", () => { state.calls.offset = Math.max(0, state.calls.offset - state.calls.limit); loadCalls().catch(reportError); });
+$("#calls-next").addEventListener("click", () => { state.calls.offset += state.calls.limit; loadCalls().catch(reportError); });
+
+async function openCall(sid) {
+  let c;
+  try { c = await api("GET", `/api/calls/${encodeURIComponent(sid)}`); }
+  catch (err) { return reportError(err); }
+
+  const close = () => { scrim.remove(); drawer.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  const scrim = h("div", { class: "scrim", onclick: close });
+
+  const fact = (label, value) => h("div", { class: "fact" }, h("span", {}, label), h("strong", {}, value || "—"));
+  const chat = h("div", { class: "chat" });
+  (c.transcript || []).forEach((t) => {
+    const user = t.role === "user";
+    chat.append(h("div", { class: `bubble-who${user ? " user" : ""}` }, user ? (c.contact_name || "Trucker") : "Sarah (AI)"),
+      h("div", { class: `bubble ${user ? "user" : "agent"}` }, t.text || ""));
+  });
+  if (!c.transcript || !c.transcript.length) chat.append(h("div", { class: "muted small" }, "No conversation recorded for this call."));
+
+  const emailBtn = c.email ? h("button", { class: "btn btn-primary btn-sm", onclick: async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await api("POST", "/api/email/send-followup", { to_email: c.email, contact_name: c.contact_name || "" });
+      toast(`Follow-up sent to ${c.email}`, "success");
+    } catch (err) { reportError(err); e.currentTarget.disabled = false; }
+  } }, icon("mail", 15), "Send follow-up email") : null;
+
+  const drawer = h("aside", { class: "drawer", role: "dialog", "aria-modal": "true", "aria-label": "Call details" },
+    h("div", { class: "drawer-head" },
+      h("div", {}, h("h3", { style: "font-size:18px" }, c.contact_name || "Unknown contact"),
+        h("div", { class: "muted small" }, [c.company, c.phone].filter(Boolean).join(" · ") || c.call_sid)),
+      h("button", { class: "btn btn-sm", "aria-label": "Close", onclick: close }, icon("x", 16))),
+    h("div", { class: "drawer-body" },
+      h("div", { class: "btn-row", style: "margin-bottom:14px" }, pill(STATUS, c.status), pill(OUTCOME, c.outcome)),
+      h("div", { class: "facts" },
+        fact("Email", c.email), fact("Interest", (c.interest || "").replace(/_/g, " ")),
+        fact("Duration", fmtDuration(c.duration)), fact("When", c.created_at ? new Date(c.created_at * 1000).toLocaleString() : "")),
+      c.summary ? h("div", { class: "summary" }, h("strong", {}, "AI summary: "), c.summary) : null,
+      emailBtn ? h("div", { style: "margin-bottom:18px" }, emailBtn) : null,
+      h("h4", { style: "margin-bottom:10px" }, "Conversation"),
+      chat));
+  document.body.append(scrim, drawer);
+  document.addEventListener("keydown", onKey);
+  drawer.querySelector("button").focus();
+}
+
+/* ================================================================== campaigns */
+async function loadCampaigns() {
+  const { campaigns } = await api("GET", "/api/campaigns");
+  const body = clear($("#campaigns-body"));
+  if (!campaigns.length) {
+    body.append(h("tr", {}, h("td", { colspan: 7, class: "empty" }, "No campaign is running. Start one above.")));
+    return;
+  }
+  campaigns.forEach((c) => {
+    const act = (label, path, cls = "") => h("button", { class: `btn btn-sm ${cls}`, onclick: async () => {
+      try { await api("POST", path); await loadCampaigns(); } catch (err) { reportError(err); }
+    } }, label);
+    const id = encodeURIComponent(c.campaign_id);
+    const actions = h("div", { class: "btn-row" });
+    if (c.status === "running") actions.append(act("Pause", `/api/campaigns/${id}/pause`));
+    if (c.status === "paused") actions.append(act("Resume", `/api/campaigns/${id}/resume`));
+    if (c.status === "running" || c.status === "paused") actions.append(act("Stop", `/api/campaigns/${id}/stop`, "btn-danger"));
+    const progress = c.total_contacts ? c.calls_made / c.total_contacts : 0;
+    body.append(h("tr", {},
+      h("td", {}, h("strong", { class: "num" }, c.campaign_id)),
+      h("td", {}, pill(STATUS, c.status)),
+      h("td", { style: "min-width:160px" },
+        h("div", { class: "small muted num", style: "margin-bottom:4px" }, `${fmtNum(c.calls_made)} / ${fmtNum(c.total_contacts)} called`),
+        h("div", { class: "progress" }, h("div", { style: `width:${Math.round(progress * 100)}%` }))),
+      h("td", { class: "num" }, fmtNum(c.calls_answered)),
+      h("td", { class: "num" }, fmtNum(c.qualified_leads)),
+      h("td", {}, c.active_calls ? h("span", { class: "btn-row" }, h("i", { class: "dot live" }), fmtNum(c.active_calls)) : "0"),
+      h("td", {}, actions)));
+  });
+}
+
+$("#form-campaign").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.submitter || $("#form-campaign button[type=submit]");
+  btn.disabled = true;
+  try {
+    const res = await api("POST", "/api/campaigns", {
+      max_concurrent_calls: Number($("#c-concurrent").value) || 1,
+      delay_between_calls: Number($("#c-delay").value) || 0,
+      max_calls: Number($("#c-max").value) || 0,
     });
+    toast(`Campaign ${res.campaign_id} started`, "success");
+    await loadCampaigns();
+  } catch (err) { reportError(err); }
+  finally { btn.disabled = false; }
+});
 
-    // ===========================
-    // Form: Send Email
-    // ===========================
-    document.getElementById("form-send-email").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector("button[type=submit]");
-        const resultEl = document.getElementById("result-send-email");
-        btn.disabled = true;
-        resultEl.className = "form-result";
-        resultEl.style.display = "none";
-
-        try {
-            await api("POST", "/api/email/send-followup", {
-                to_email: document.getElementById("inp-email").value.trim(),
-                contact_name: document.getElementById("inp-email-name").value.trim() || "there",
-            });
-            resultEl.className = "form-result success";
-            resultEl.textContent = "Follow-up email sent successfully!";
-            resultEl.style.display = "block";
-            showToast("Email sent!", "success");
-        } catch (err) {
-            resultEl.className = "form-result error";
-            resultEl.textContent = `Error: ${err.message}`;
-            resultEl.style.display = "block";
-            showToast(err.message, "error");
-        }
-        btn.disabled = false;
+/* ================================================================== test call */
+$("#form-test").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.submitter || $("#form-test button[type=submit]");
+  btn.disabled = true;
+  try {
+    await api("POST", "/api/calls/single", {
+      phone_number: $("#t-phone").value.trim(),
+      contact_name: $("#t-name").value.trim(),
+      company: $("#t-company").value.trim(),
     });
+    toast("Calling now — your phone should ring in a few seconds", "success");
+  } catch (err) { reportError(err); }
+  finally { btn.disabled = false; }
+});
 
-    // ===========================
-    // Tab Click Handlers
-    // ===========================
-    document.querySelectorAll("nav button").forEach(btn => {
-        btn.addEventListener("click", () => switchPage(btn.dataset.page));
+/* ================================================================== setup */
+const SHEET_COLUMNS = ["Name", "Phone", "Company", "Status", "Call SID", "Duration", "Interest", "Email", "Outcome", "Summary", "Called At"];
+const openSteps = new Set();
+
+async function loadSetup() {
+  const data = await api("GET", "/api/setup/status");
+  state.setup = data;
+  const total = data.total_count, done = data.configured_count;
+  $("#setup-count").textContent = `${done} of ${total}`;
+  $("#setup-bar").style.width = `${(done / total) * 100}%`;
+  const missing = data.integrations.filter((i) => i.required && !i.configured).length;
+  $("#setup-badge").textContent = missing;
+  $("#setup-badge").classList.toggle("hidden", !missing);
+  $("#setup-banner").classList.toggle("hidden", data.ready);
+  $("#campaign-warn").classList.toggle("hidden", data.ready);
+  $("#setup-banner-text").textContent = `${done} of ${total} services connected — ${missing} required step${missing === 1 ? "" : "s"} left.`;
+  $("#setup-banner-bar").style.width = `${(done / total) * 100}%`;
+  if (!openSteps.size) {
+    const first = data.integrations.find((i) => !i.configured);
+    if (first) openSteps.add(first.id);
+  }
+  renderSetup(data);
+}
+
+function renderSetup(data) {
+  const box = clear($("#setup-steps"));
+  data.integrations.forEach((integ, idx) => box.append(setupStep(integ, idx + 1, data)));
+}
+
+function copyBox(text) {
+  return h("div", { class: "copy-box" }, h("code", {}, text),
+    h("button", { type: "button", class: "btn btn-sm", onclick: async () => {
+      try { await navigator.clipboard.writeText(text); toast("Copied", "success"); }
+      catch (_) { toast("Copy failed — select the text instead", "error"); }
+    } }, icon("copy", 14), "Copy"));
+}
+
+function setupStep(integ, n, data) {
+  const open = openSteps.has(integ.id);
+  const step = h("div", { class: `card step${integ.configured ? " done" : ""}${open ? " open" : ""}` });
+  const status = integ.configured ? h("span", { class: "pill good" }, "Connected")
+    : integ.required ? h("span", { class: "pill warn" }, "Needed") : h("span", { class: "pill" }, "Optional");
+  const head = h("div", { class: "step-head", role: "button", tabindex: 0, "aria-expanded": String(open) },
+    h("div", { class: "step-num" }, integ.configured ? icon("check", 15) : String(n)),
+    h("div", { class: "step-title" }, h("strong", {}, integ.name), h("span", {}, integ.purpose)),
+    status, h("span", { class: "step-chevron" }, icon("chevron", 18)));
+  const toggle = () => {
+    step.classList.toggle("open");
+    if (step.classList.contains("open")) openSteps.add(integ.id); else openSteps.delete(integ.id);
+    head.setAttribute("aria-expanded", String(step.classList.contains("open")));
+  };
+  head.addEventListener("click", toggle);
+  head.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+
+  const form = h("form", { autocomplete: "off" });
+  const result = h("div", { class: "check-result hidden", role: "status" });
+  const showResult = (r) => {
+    result.className = `check-result ${r.ok ? "ok" : "fail"}`;
+    result.textContent = (r.ok ? "✓ " : "✕ ") + r.message;
+  };
+
+  if (integ.id === "sheets") {
+    form.append(h("p", { class: "muted small", style: "margin:0 0 8px" },
+      "Your sheet's first row should have these columns (they're created automatically if the sheet is empty):"),
+      h("div", { class: "sheet-cols" }, SHEET_COLUMNS.map((c) => h("span", {}, c))));
+    const file = h("input", { type: "file", accept: ".json,application/json", class: "hidden" });
+    const drop = h("div", { class: "dropzone", tabindex: 0, role: "button" }, icon("upload", 18), " ",
+      integ.service_account_email ? "Replace service-account key (.json)" : "Upload service-account key (.json)");
+    const upload = async (f) => {
+      if (!f) return;
+      try {
+        const res = await api("POST", "/api/setup/sheets/credentials", { content: await f.text() });
+        toast("Key uploaded", "success");
+        openSteps.add("sheets");
+        await loadSetup();
+        return res;
+      } catch (err) { reportError(err); }
+    };
+    drop.addEventListener("click", () => file.click());
+    drop.addEventListener("keydown", (e) => { if (e.key === "Enter") file.click(); });
+    drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("drag"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("drag"));
+    drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("drag"); upload(e.dataTransfer.files[0]); });
+    file.addEventListener("change", () => upload(file.files[0]));
+    form.append(drop, file);
+    if (integ.service_account_email) {
+      form.append(h("div", { class: "field-label" }, "Share your sheet with this email (as Editor):"), copyBox(integ.service_account_email));
+    }
+  }
+
+  integ.fields.forEach((f) => {
+    const input = h("input", {
+      type: f.secret ? "password" : "text", name: f.key, autocomplete: "off", spellcheck: "false",
+      placeholder: f.secret && f.set ? `Saved ${f.value} — leave blank to keep` : f.placeholder,
     });
+    if (!f.secret) input.value = f.value;
+    form.append(h("label", { class: "field" }, h("span", { class: "field-label" }, f.label), input,
+      f.help ? h("span", { class: "field-help" }, f.help) : null));
+  });
 
-    // ===========================
-    // Init
-    // ===========================
-    checkHealth();
-    setInterval(checkHealth, 30000);
-    switchPage("dashboard");
+  if (integ.id === "server" && data.twilio_urls.status_callback) {
+    form.append(h("p", { class: "muted small", style: "margin:0 0 6px" },
+      "Calls use these URLs automatically — nothing to paste into Twilio:"),
+      copyBox(data.twilio_urls.voice), copyBox(data.twilio_urls.status_callback));
+  }
+
+  const saveBtn = h("button", { type: "submit", class: "btn btn-primary" }, "Save & test");
+  const testBtn = h("button", { type: "button", class: "btn" }, "Test connection");
+  testBtn.addEventListener("click", async () => {
+    testBtn.disabled = true; testBtn.textContent = "Testing…";
+    try { showResult(await api("POST", `/api/setup/test/${integ.id}`)); }
+    catch (err) { reportError(err); }
+    finally { testBtn.disabled = false; testBtn.textContent = "Test connection"; }
+  });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const values = {};
+    integ.fields.forEach((f) => { values[f.key] = form.elements[f.key].value; });
+    saveBtn.disabled = true; saveBtn.textContent = "Saving…";
+    try {
+      await api("POST", `/api/setup/${integ.id}`, { values });
+      const r = await api("POST", `/api/setup/test/${integ.id}`);
+      openSteps.add(integ.id);
+      await loadSetup();
+      toast(r.ok ? `${integ.name} connected` : `${integ.name} saved — check the test result`, r.ok ? "success" : "error");
+      const fresh = $$("#setup-steps .step")[n - 1];
+      const box = fresh && fresh.querySelector(".check-result");
+      if (box) { box.className = `check-result ${r.ok ? "ok" : "fail"}`; box.textContent = (r.ok ? "✓ " : "✕ ") + r.message; }
+    } catch (err) { reportError(err); saveBtn.disabled = false; saveBtn.textContent = "Save & test"; }
+  });
+  form.append(h("div", { class: "btn-row" }, saveBtn, testBtn,
+    h("a", { href: integ.console_url, target: "_blank", rel: "noopener noreferrer", class: "btn btn-sm", style: "margin-left:auto" },
+      "Get keys", icon("external", 14))), result);
+
+  step.append(head, h("div", { class: "step-body" }, form));
+  return step;
+}
+
+boot();
 </script>
-
 </body>
 </html>
