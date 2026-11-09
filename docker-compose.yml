@@ -8,10 +8,13 @@ services:
     env_file:
       - .env
     volumes:
-      - ./credentials:/app/credentials:ro
+      - ./credentials:/app/credentials
+      - ./data:/app/data            # call history + session key survive rebuilds
+      - ./.env:/app/.env            # lets the setup wizard save keys
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      # python:3.11-slim has no curl
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
