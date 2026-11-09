@@ -7,6 +7,7 @@ import logging
 
 from fastapi import APIRouter, Form
 
+from app.campaign.dialer import notify_call_status
 from app.storage.call_log import get_call_log
 
 router = APIRouter()
@@ -49,6 +50,11 @@ async def twilio_status_callback(
         get_call_log().update_status(CallSid, CallStatus, duration=duration, phone=To)
     except Exception:
         logger.exception("Call log update failed for %s", CallSid)
+
+    try:
+        notify_call_status(CallSid, CallStatus)
+    except Exception:
+        logger.exception("Campaign notification failed for %s", CallSid)
 
     return {"status": "ok"}
 

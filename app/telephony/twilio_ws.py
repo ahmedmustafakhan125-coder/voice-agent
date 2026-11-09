@@ -11,6 +11,7 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.campaign.dialer import get_campaign
 from app.pipeline.session import CallSession
 from app.telephony.media import (  # noqa: F401  (re-exported for compatibility)
     clear_twilio_audio,
@@ -62,6 +63,10 @@ async def media_stream(websocket: WebSocket):
                     contact_name=custom_params.get("contact_name", ""),
                     contact_company=custom_params.get("contact_company", ""),
                 )
+                # Route the result back to the campaign that placed this call
+                dialer = get_campaign(session.campaign_id) if session.campaign_id else None
+                if dialer:
+                    session.on_call_complete = dialer.get_results_queue()
                 # Start the pipeline in the background
                 asyncio.create_task(session.run())
 

@@ -12,6 +12,7 @@ import time
 from dataclasses import dataclass, field
 
 from app.automation.sheets import SheetsClient
+from app.storage.call_log import TERMINAL_UNANSWERED
 from app.telephony.twilio_client import initiate_outbound_call
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,8 @@ class CampaignConfig:
     delay_between_calls: float = 5.0    # Seconds between starting calls
     max_calls: int = 0                  # 0 = unlimited (call all pending)
     agent_config_id: str = ""           # Custom agent config (future)
+    call_timeout: float = 900.0         # Max seconds to wait for a call's result
+    result_grace_seconds: float = 30.0  # Wait after Twilio "completed" for the result
 
 
 @dataclass
@@ -55,6 +58,12 @@ def get_all_campaigns() -> dict[str, "CampaignDialer"]:
     return _active_campaigns.copy()
 
 
+def notify_call_status(call_sid: str, status: str) -> None:
+    """Forward a Twilio status callback to whichever campaign owns the call."""
+    for dialer in list(_active_campaigns.values()):
+        dialer.on_call_status(call_sid, status)
+
+
 class CampaignDialer:
     """Async campaign dialer that orchestrates outbound calling."""
 
@@ -70,6 +79,10 @@ class CampaignDialer:
 
         # Row mapping: contact_id (row str) -> row data
         self._contact_map: dict[str, dict] = {}
+        # call_sid -> Event set once that call is fully finished
+        self._pending: dict[str, asyncio.Event] = {}
+        # call_sid -> sheet row, for calls that end without a conversation
+        self._call_rows: dict[str, int] = {}
 
     async def start(self) -> None:
         """Start the campaign in the background."""
@@ -201,11 +214,25 @@ class CampaignDialer:
 
             if call_sid:
                 self.stats.calls_made += 1
+                done = self._pending.setdefault(call_sid, asyncio.Event())
+                self._call_rows[call_sid] = row
                 await self.sheets.mark_calling(row, call_sid)
                 logger.info(
                     "Campaign %s: calling %s (%s) sid=%s",
                     self.config.campaign_id, name, phone, call_sid,
                 )
+                # Hold this concurrency slot until the call is really over,
+                # so results are processed before the campaign finishes.
+                try:
+                    await asyncio.wait_for(done.wait(), timeout=self.config.call_timeout)
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "Campaign %s: no result for %s after %.0fs",
+                        self.config.campaign_id, call_sid, self.config.call_timeout,
+                    )
+                finally:
+                    self._pending.pop(call_sid, None)
+                    self._call_rows.pop(call_sid, None)
             else:
                 self.stats.calls_failed += 1
                 await self.sheets.mark_failed(row, "twilio_initiate_failed")
@@ -252,6 +279,44 @@ class CampaignDialer:
 
             except Exception:
                 logger.exception("Error processing call result")
+            finally:
+                self._release(result.get("call_sid", ""))
+
+    def _release(self, call_sid: str) -> None:
+        """Mark a call as finished so its _make_call slot is freed."""
+        event = self._pending.get(call_sid)
+        if event is not None:
+            event.set()
+
+    def on_call_status(self, call_sid: str, status: str) -> None:
+        """React to Twilio status callbacks for calls in this campaign."""
+        if call_sid not in self._pending:
+            return
+        status = (status or "").lower()
+        if status in TERMINAL_UNANSWERED:
+            # Nobody picked up — there will be no conversation result.
+            asyncio.create_task(self._finish_without_result(call_sid, status))
+        elif status == "completed":
+            # Normally the CallSession result follows; don't wait forever if not.
+            asyncio.get_running_loop().call_later(
+                self.config.result_grace_seconds,
+                lambda: asyncio.create_task(
+                    self._finish_without_result(call_sid, "no_conversation")
+                ),
+            )
+
+    async def _finish_without_result(self, call_sid: str, reason: str) -> None:
+        event = self._pending.get(call_sid)
+        if event is None or event.is_set():
+            return  # already finished (e.g. result arrived during the grace period)
+        row = self._call_rows.get(call_sid)
+        try:
+            if row is not None:
+                await self.sheets.mark_failed(row, reason)
+        except Exception:
+            logger.exception("Failed to mark row %s as %s", row, reason)
+        finally:
+            event.set()
 
     def get_results_queue(self) -> asyncio.Queue:
         """Get the results queue so CallSession can push results to it."""
