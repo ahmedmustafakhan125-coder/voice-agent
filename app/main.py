@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
 from app.api.routes import router as api_router
+from app.api.setup import router as setup_router
 from app.api.webhooks import router as webhooks_router
 from app.telephony.twiml import router as twiml_router
 from app.config import settings
@@ -85,6 +86,7 @@ app.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])
 app.include_router(auth_router, prefix="/api", tags=["Auth"])
 app.include_router(api_router, prefix="/api", tags=["API"])
 app.include_router(dashboard_router, prefix="/api", tags=["Dashboard"])
+app.include_router(setup_router, prefix="/api", tags=["Setup"])
 
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
