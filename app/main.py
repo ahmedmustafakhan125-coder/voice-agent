@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.dashboard import router as dashboard_router
 from app.api.routes import router as api_router
 from app.api.webhooks import router as webhooks_router
 from app.telephony.twiml import router as twiml_router
@@ -55,6 +56,7 @@ app.include_router(twiml_router, prefix="/twiml", tags=["TwiML"])
 app.include_router(ws_router, prefix="/ws", tags=["WebSocket"])
 app.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])
 app.include_router(api_router, prefix="/api", tags=["API"])
+app.include_router(dashboard_router, prefix="/api", tags=["Dashboard"])
 
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"

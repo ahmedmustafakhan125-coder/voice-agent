@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # Local data (call history database)
     data_dir: str = "data"
 
+    # Cost model shown on the dashboard ($ per talk minute)
+    cost_per_minute: float = 0.02
+    industry_cost_per_minute: float = 0.09
+
     model_config = {"env_file": ENV_FILE, "env_file_encoding": "utf-8", "extra": "ignore"}
 
 

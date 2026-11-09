@@ -24,6 +24,7 @@ from app.campaign.dialer import (
     get_all_campaigns,
     get_campaign,
 )
+from app.storage.call_log import get_call_log
 from app.telephony.twilio_client import initiate_outbound_call
 
 router = APIRouter()
@@ -192,13 +193,14 @@ async def send_followup(req: SendEmailRequest):
 
 @router.get("/stats")
 async def global_stats():
-    """Get aggregate stats across all campaigns."""
+    """Aggregate stats across all calls ever made (from the call log)."""
     campaigns = get_all_campaigns()
+    summary = get_call_log().summary()
 
-    total_calls = sum(d.stats.calls_made for d in campaigns.values())
-    total_answered = sum(d.stats.calls_answered for d in campaigns.values())
-    total_qualified = sum(d.stats.qualified_leads for d in campaigns.values())
-    total_failed = sum(d.stats.calls_failed for d in campaigns.values())
+    total_calls = summary["total_calls"]
+    total_answered = summary["answered"]
+    total_qualified = summary["qualified"]
+    total_failed = summary["failed"]
     active_campaigns = sum(
         1 for d in campaigns.values() if d.stats.status == "running"
     )
